@@ -4,8 +4,3 @@
 */.next/
 */dist/
 *.log
-
-# Application repos are separate git repositories (junctions on this machine)
-ssc-booking-frontend/
-ssc-booking-backend/
-ssc-booking-fileserver/
