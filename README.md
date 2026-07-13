@@ -10,17 +10,20 @@ Paperless event management for Cor Jesu College, Inc.
 | `ssc-booking-backend/` | Spring Boot (main API) | 8081 |
 | `ssc-booking-fileserver/` | Spring Boot (files → MinIO) | 8080 |
 
-> On this machine the three folders are **directory junctions** pointing at the
-> existing repos (`Desktop\SSC v0`, `Desktop\ssc-booking-backend`,
-> `C:\Users\User\expert-funicular`). On a fresh clone, `git clone` each app repo
-> into its folder instead.
+> The three app folders are **git submodules** pinned to specific commits:
+> `5gcrg/SSC-Event-System`, `5gcrg/SSC-Event-System-Backend`, and
+> `Radzuuuu/expert-funicular`. After pushing changes to an app repo, update the
+> pin here with `git submodule update --remote <folder>` and commit.
 
 ## Quick Start
 
 ### 1. Clone
 ```
-git clone https://github.com/yourorg/ssc-system
-cd ssc-system
+git clone --recursive https://github.com/5gcrg/SSC-System.git
+cd SSC-System
+
+# already cloned without --recursive?
+git submodule update --init
 ```
 
 ### 2. Configure
