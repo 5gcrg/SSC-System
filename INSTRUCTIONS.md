@@ -80,9 +80,28 @@ Remove-Item mysql-extract, mysql.zip -Recurse -Force
 
 # initialize the data directory (root user, no password)
 .\mysql\bin\mysqld.exe --no-defaults --initialize-insecure --basedir="$PWD\mysql" --datadir="$PWD\mysql\data"
+```
 
-# start MySQL as a background process (re-run this after every reboot,
-# or register it with Task Scheduler / NSSM)
+**Running as Administrator (the normal case on the server):** register it
+as a Windows service so MySQL starts automatically on boot:
+
+```powershell
+# write the config the service will use
+@"
+[mysqld]
+basedir=$PWD\mysql
+datadir=$PWD\mysql\data
+port=3306
+"@ | Out-File -Encoding ascii .\mysql\my.ini
+
+.\mysql\bin\mysqld.exe --install MySQL80 --defaults-file="$PWD\mysql\my.ini"
+net start MySQL80
+```
+
+**Without admin rights** (fallback): run it as a plain background process —
+you must re-run this after every reboot:
+
+```powershell
 Start-Process .\mysql\bin\mysqld.exe -ArgumentList '--no-defaults',"--basedir=$PWD\mysql","--datadir=$PWD\mysql\data",'--console' -WindowStyle Minimized
 ```
 
