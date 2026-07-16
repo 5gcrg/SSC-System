@@ -4,3 +4,6 @@
 */.next/
 */dist/
 *.log
+
+# Bare-metal MinIO install (downloaded by scripts/setup.ps1)
+minio/
