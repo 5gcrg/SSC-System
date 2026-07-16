@@ -1,6 +1,16 @@
 # SSC Event Booking System - one-time setup for bare-metal Windows.
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+# Non-interactive (automation/AI agents):
+#   powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -MySqlRootPassword "yourpwd"
+#   (pass an empty string "" if root has no password, e.g. portable-ZIP MySQL)
 # See INSTRUCTIONS.md for the manual equivalent of every step.
+
+# Plain string by design: lets automation (CI, AI agents) run this end-to-end.
+# It is a fresh local dev password, not a secret worth protecting here.
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', 'MySqlRootPassword')]
+param(
+    [string]$MySqlRootPassword = $null
+)
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
@@ -35,9 +45,11 @@ if (-not (Test-Path (Join-Path $repo 'ssc-booking-backend\pom.xml'))) {
 
 # --- 2. Create database and user ---------------------------------------------
 Write-Host "`n[2/6] Creating MySQL database 'ssc_booking' and user 'sscuser'..." -ForegroundColor Cyan
-$rootPwd = Read-Host "Enter your MySQL root password" -AsSecureString
-$rootPwdPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($rootPwd))
+if ($null -eq $MySqlRootPassword) {
+    $rootPwd = Read-Host "Enter your MySQL root password (blank if none)" -AsSecureString
+    $MySqlRootPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($rootPwd))
+}
 
 $sql = @'
 CREATE DATABASE IF NOT EXISTS ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -47,9 +59,14 @@ GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'localhost';
 GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'%';
 FLUSH PRIVILEGES;
 '@
-$sql | mysql -u root --password=$rootPwdPlain
+if ([string]::IsNullOrEmpty($MySqlRootPassword)) {
+    $sql | mysql -u root --skip-password
+} else {
+    $sql | mysql -u root --password=$MySqlRootPassword
+}
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "MySQL setup failed - check the root password and that the MySQL80 service is running." -ForegroundColor Red
+    Write-Host "MySQL setup failed - check the root password and that MySQL is running on port 3306." -ForegroundColor Red
+    Write-Host "(Installed via the portable ZIP? See INSTRUCTIONS.md section 1, MySQL option C.)"
     exit 1
 }
 Write-Host "  Database ready. (Tables are created by Flyway on first backend start.)"

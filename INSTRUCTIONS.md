@@ -65,6 +65,44 @@ mysql --version  # mysql  Ver 8.0.x
 > **MySQL note:** if `mysql` is not on PATH after installing, add
 > `C:\Program Files\MySQL\MySQL Server 8.0\bin` to the system PATH.
 
+### MySQL Option C — portable ZIP (fully unattended, no installer, no admin)
+
+Use this when you can't click through the MySQL installer (automation,
+restricted accounts). Everything lives inside the repo folder; root has
+**no password** (fine for a dev box; local connections only):
+
+```powershell
+cd C:\SSC-System
+Invoke-WebRequest -Uri "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.44-winx64.zip" -OutFile mysql.zip
+Expand-Archive mysql.zip -DestinationPath mysql-extract
+Move-Item mysql-extract\mysql-8.0.44-winx64 mysql
+Remove-Item mysql-extract, mysql.zip -Recurse -Force
+
+# initialize the data directory (root user, no password)
+.\mysql\bin\mysqld.exe --no-defaults --initialize-insecure --basedir="$PWD\mysql" --datadir="$PWD\mysql\data"
+
+# start MySQL as a background process (re-run this after every reboot,
+# or register it with Task Scheduler / NSSM)
+Start-Process .\mysql\bin\mysqld.exe -ArgumentList '--no-defaults',"--basedir=$PWD\mysql","--datadir=$PWD\mysql\data",'--console' -WindowStyle Minimized
+```
+
+With this option, `mysql` is at `.\mysql\bin\mysql.exe` (add `mysql\bin` to
+PATH or call it by full path) and the root password is **empty** — pass
+`-MySqlRootPassword ""` to the setup script (next section).
+
+### Running unattended (automation / AI agents)
+
+`scripts\setup.ps1` is interactive only for the MySQL root password. Pass
+it as a parameter to run with zero prompts:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -MySqlRootPassword "yourpwd"
+# portable-ZIP MySQL (no root password):
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -MySqlRootPassword ""
+```
+
+`start-all.ps1` and `stop-all.ps1` never prompt.
+
 ---
 
 ## 2. Clone the repository
