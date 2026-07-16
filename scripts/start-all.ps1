@@ -34,9 +34,14 @@ Write-Host "=== Starting SSC System ===" -ForegroundColor Cyan
 $mysqlSvc = Get-Service -Name 'MySQL*' -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($mysqlSvc -and $mysqlSvc.Status -ne 'Running') {
     Write-Host "Starting MySQL service ($($mysqlSvc.Name))..."
-    Start-Service $mysqlSvc.Name
+    try {
+        Start-Service $mysqlSvc.Name -ErrorAction Stop
+    } catch {
+        Write-Host "  Warning: could not start MySQL service — run this script as Administrator" -ForegroundColor Yellow
+        Write-Host "  or start MySQL manually, then re-run." -ForegroundColor Yellow
+    }
 }
-if (-not (Wait-Port 3306 'MySQL')) { Write-Host "MySQL is not reachable - install/start it first."; exit 1 }
+if (-not (Wait-Port 3306 'MySQL')) { Write-Host "MySQL is not reachable — start it first (run as Administrator if using a Windows service)."; exit 1 }
 
 # --- MinIO -----------------------------------------------------------------------
 if (Test-PortOpen 9000) {
@@ -60,10 +65,11 @@ if (Test-PortOpen 8080) {
     $fsJar = Get-ChildItem (Join-Path $repo 'ssc-booking-fileserver\target') -Filter '*.jar' -ErrorAction SilentlyContinue |
              Where-Object { $_.Name -notlike '*sources*' } | Select-Object -First 1
     if (-not $fsJar) { Write-Host "File server jar not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
+    $javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java' }
     Start-Process powershell -ArgumentList '-NoExit', '-Command', @"
 `$host.UI.RawUI.WindowTitle = 'SSC - File Server (8080)'
 Set-Location '$repo\ssc-booking-fileserver'
-java -jar '$($fsJar.FullName)'
+& '$javaExe' -jar '$($fsJar.FullName)'
 "@
     if (-not (Wait-Port 8080 'File Server')) { exit 1 }
 }
@@ -75,10 +81,11 @@ if (Test-PortOpen 8081) {
     $beJar = Get-ChildItem (Join-Path $repo 'ssc-booking-backend\target') -Filter '*.jar' -ErrorAction SilentlyContinue |
              Where-Object { $_.Name -notlike '*sources*' } | Select-Object -First 1
     if (-not $beJar) { Write-Host "Backend jar not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
+    $javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java' }
     Start-Process powershell -ArgumentList '-NoExit', '-Command', @"
 `$host.UI.RawUI.WindowTitle = 'SSC - Main API (8081)'
 Set-Location '$repo\ssc-booking-backend'
-java -jar '$($beJar.FullName)'
+& '$javaExe' -jar '$($beJar.FullName)'
 "@
     # First start runs all Flyway migrations, allow extra time
     if (-not (Wait-Port 8081 'Main API' 180)) { exit 1 }
