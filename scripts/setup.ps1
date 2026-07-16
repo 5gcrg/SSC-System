@@ -66,7 +66,7 @@ if ([string]::IsNullOrEmpty($MySqlRootPassword)) {
 }
 if ($LASTEXITCODE -ne 0) {
     Write-Host "MySQL setup failed - check the root password and that MySQL is running on port 3306." -ForegroundColor Red
-    Write-Host "(Installed via the portable ZIP? See INSTRUCTIONS.md section 1, MySQL option C.)"
+    Write-Host "(Installed via the portable ZIP? See INSTRUCTIONS.md section 1, MySQL option D.)"
     exit 1
 }
 Write-Host "  Database ready. (Tables are created by Flyway on first backend start.)"

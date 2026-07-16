@@ -50,7 +50,37 @@ node --version   # v22.x (or v18.18+)
 mysql --version  # mysql  Ver 8.0.x
 ```
 
-### Option B — manual downloads
+### Option B — Chocolatey (run in an **elevated** PowerShell)
+
+If Chocolatey isn't installed yet:
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
+
+Then:
+
+```powershell
+choco install git -y
+choco install temurin21 -y
+choco install maven -y
+choco install nodejs-lts -y
+choco install mysql --version=8.0.44 -y
+```
+
+Notes:
+- `nodejs-lts` currently installs Node 22 LTS — exactly what we need.
+- The `mysql` package installs MySQL **as a Windows service** with an
+  **empty root password** — pass `-MySqlRootPassword ""` to the setup
+  script later. Pin to `--version=8.0.44` (or any 8.0.x); if that pin is
+  unavailable, use MySQL Option D (portable ZIP) below instead of an
+  unpinned 9.x install.
+- Close and reopen PowerShell afterwards (or run `refreshenv`) so the
+  tools are on PATH.
+
+### Option C — manual downloads
 
 - Git: https://git-scm.com/download/win
 - Temurin JDK 21: https://adoptium.net/temurin/releases/?version=21
@@ -65,7 +95,7 @@ mysql --version  # mysql  Ver 8.0.x
 > **MySQL note:** if `mysql` is not on PATH after installing, add
 > `C:\Program Files\MySQL\MySQL Server 8.0\bin` to the system PATH.
 
-### MySQL Option C — portable ZIP (fully unattended, no installer, no admin)
+### MySQL Option D — portable ZIP (fully unattended, no installer, no admin)
 
 Use this when you can't click through the MySQL installer (automation,
 restricted accounts). Everything lives inside the repo folder; root has
