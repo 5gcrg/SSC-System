@@ -5,5 +5,9 @@
 */dist/
 *.log
 
-# Bare-metal MinIO install (downloaded by scripts/setup.ps1)
+# Bare-metal local installs and runtime files (created by scripts/setup.ps1 or manual setup)
 minio/
+mysql/
+logs/
+migration-backup/
+mysql-*.zip
