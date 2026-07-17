@@ -89,20 +89,29 @@ function Draw-Dashboard {
 
 # --- Main loop -----------------------------------------------------------------
 try {
+    $canReadKeys = $true
     while ($true) {
         Draw-Dashboard
 
         $waitedMs = 0
         $refreshMs = $RefreshSeconds * 1000
         $keyPressed = $null
-        while ($waitedMs -lt $refreshMs) {
-            if ([Console]::KeyAvailable) {
-                $keyPressed = [Console]::ReadKey($true)
+        while ($canReadKeys -and $waitedMs -lt $refreshMs) {
+            try {
+                if ([Console]::KeyAvailable) {
+                    $keyPressed = [Console]::ReadKey($true)
+                    break
+                }
+            } catch [System.InvalidOperationException] {
+                # No console input available (redirected/non-interactive session,
+                # e.g. a scheduled task) - fall back to a display-only refresh loop.
+                $canReadKeys = $false
                 break
             }
             Start-Sleep -Milliseconds 200
             $waitedMs += 200
         }
+        if (-not $canReadKeys) { Start-Sleep -Seconds $RefreshSeconds }
 
         if ($null -ne $keyPressed) {
             switch ($keyPressed.Key) {
