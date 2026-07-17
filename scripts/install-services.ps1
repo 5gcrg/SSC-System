@@ -68,6 +68,29 @@ if (-not $beJar) { Write-Host "Backend jar not found - run scripts\setup.ps1 fir
 if (-not (Test-Path $nextBin)) { Write-Host "Frontend not built - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
 if (-not (Test-Path $minioExe)) { Write-Host "minio.exe not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
 
+# --- Port conflict check ---------------------------------------------------------
+# None of these 4 services exist as Windows Services yet on a fresh install, so
+# anything already listening on their ports right now must be a manually-started
+# process (start-all.ps1, the browser dashboard, etc.) that will make the new
+# services fail to bind and crash-loop with a confusing "address already in use"
+# buried in their logs. Catch it here instead, with a clear fix.
+$portConflicts = @()
+foreach ($portCheck in @(
+    @{ Port = 9000; Service = 'SSC-MinIO' }
+    @{ Port = 8080; Service = 'SSC-FileServer' }
+    @{ Port = 8081; Service = 'SSC-Backend' }
+    @{ Port = 3000; Service = 'SSC-Frontend' }
+)) {
+    $conn = Get-NetTCPConnection -LocalPort $portCheck.Port -State Listen -ErrorAction SilentlyContinue
+    if ($conn) { $portConflicts += "$($portCheck.Service) needs port $($portCheck.Port), already in use (PID $($conn.OwningProcess -join ', '))" }
+}
+if ($portConflicts.Count -gt 0) {
+    Write-Host "Port conflict - stop whatever's already running first:" -ForegroundColor Red
+    $portConflicts | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    Write-Host "`nRun 'scripts\stop-all.ps1' (stops manually-started processes) and re-run this script." -ForegroundColor Yellow
+    exit 1
+}
+
 $mysqlSvc = Get-Service -Name 'MySQL*' -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $mysqlSvc) {
     Write-Host "Warning: no MySQL Windows service found - SSC-Backend will install without a MySQL dependency." -ForegroundColor Yellow
@@ -106,7 +129,11 @@ function Install-NssmService {
     }
 
     if ($DependsOn.Count -gt 0) {
-        & $nssmExe set $Name DependOnService ($DependsOn -join '/') | Out-Null
+        # NSSM's DependOnService takes each dependency as its own argument -
+        # NOT a single slash- or comma-joined string (that gets treated as one
+        # literal, invalid service name and fails with "dependency service
+        # does not exist").
+        & $nssmExe set $Name DependOnService @DependsOn | Out-Null
     }
 
     Write-Host "  $Name configured." -ForegroundColor Green
