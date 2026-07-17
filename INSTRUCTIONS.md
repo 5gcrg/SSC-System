@@ -399,4 +399,5 @@ Flyway applies any new database migrations automatically on backend start.
 | Frontend shows "Network error — is the backend running?" | Main API isn't up on 8081, or `NEXT_PUBLIC_API_URL` points at the wrong host (rebuild after editing `.env.local`) |
 | Google sign-in rejected | The frontend origin isn't in the OAuth client's authorized JavaScript origins |
 | `mvn` / `java` / `node` not recognized | Reopen PowerShell after installing, or add the install folder to PATH |
-| Logout / session expires quickly | By design — JWT lifespan is 5 minutes (`app.jwt.expiration` in the backend `application.yml`) |
+| Logout / session expires after a week | By design — JWT lifespan is 7 days (`app.jwt.expiration` in the backend `application.yml`) |
+| `POST /api/v1/dev/token/{userId}` returns 404 | Dev-only test-token endpoint is disabled by default. Set `$env:DEV_ENDPOINTS_ENABLED = "true"` before starting the backend to enable it for local testing. **Never** set this on a server reachable outside your own machine — it mints a valid login token for any user ID with no authentication check |

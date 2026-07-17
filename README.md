@@ -87,5 +87,3 @@ mvn spring-boot:run
 - **Serving other computers on the network:** see INSTRUCTIONS.md §6 —
   the frontend must be rebuilt with the server's IP, CORS allow-lists
   updated, and firewall ports opened.
-- The old Docker files (`docker-compose.*.yml`, `Dockerfile`s) are kept in
-  the repos but are **no longer the supported way to run the system**.
