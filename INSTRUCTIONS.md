@@ -359,7 +359,42 @@ machines on the network use the system:
 
 ## 7. Start automatically on boot (optional)
 
-Simplest: Task Scheduler.
+### Option A — Windows Services via NSSM (recommended)
+
+Registers MinIO, File Server, Main API, and Frontend as real Windows
+Services — auto-start on boot, restart-on-crash, visible in `services.msc`.
+MySQL is untouched (already its own native Windows service). Requires
+`scripts\setup.ps1` to have been run at least once first.
+
+From an **elevated** PowerShell (Run as administrator):
+
+```powershell
+cd C:\SSC-System
+powershell -ExecutionPolicy Bypass -File scripts\install-services.ps1
+```
+
+Downloads `nssm.exe` into `nssm\` if missing, registers `SSC-MinIO` /
+`SSC-FileServer` / `SSC-Backend` / `SSC-Frontend` with dependencies wired
+so Windows starts them in the right order, and starts them immediately.
+
+Check status anytime with `scripts\monitor.ps1` (works the same whether
+services are running this way or manually via `start-all.ps1`) or
+`services.msc`. Each service's output goes to `logs\<service>.log` /
+`logs\<service>.err.log`.
+
+To remove everything this installs (also elevated):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\uninstall-services.ps1
+```
+
+Don't run `scripts\start-all.ps1` at the same time as the installed
+services — they'd fight over the same ports. Use one or the other.
+
+### Option B — Task Scheduler (simpler, no restart-on-crash)
+
+Runs `start-all.ps1` at startup as a plain scheduled task instead of real
+services — simpler to set up, but won't restart a service that crashes.
 
 ```powershell
 $action  = New-ScheduledTaskAction -Execute "powershell.exe" `
@@ -368,9 +403,6 @@ $trigger = New-ScheduledTaskTrigger -AtStartup
 Register-ScheduledTask -TaskName "SSC-System" -Action $action -Trigger $trigger `
     -RunLevel Highest -User "SYSTEM"
 ```
-
-(For proper Windows services with restart-on-crash, install each service
-with [NSSM](https://nssm.cc/) instead — out of scope here.)
 
 ---
 
