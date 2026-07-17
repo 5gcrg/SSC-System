@@ -1,4 +1,4 @@
-# SSC Event Booking System - one-time setup for bare-metal Windows.
+﻿# SSC Event Booking System - one-time setup for bare-metal Windows.
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 # Non-interactive (automation/AI agents):
 #   powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -MySqlRootPassword "yourpwd"

@@ -1,4 +1,4 @@
-# SSC System — Dashboard Launcher
+﻿# SSC System — Dashboard Launcher
 # Run from the repo root:
 #   powershell -ExecutionPolicy Bypass -File scripts\dashboard.ps1
 #

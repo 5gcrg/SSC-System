@@ -1,4 +1,4 @@
-# SSC Event Booking System — stop all app services.
+﻿# SSC Event Booking System — stop all app services.
 # Stops whatever is listening on the app ports (3000, 8080, 8081, 9000).
 # Leaves the MySQL Windows service running (stop it via services.msc if needed).
 

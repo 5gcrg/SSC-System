@@ -1,4 +1,4 @@
-# SSC Event Booking System - start all services (bare-metal Windows).
+﻿# SSC Event Booking System - start all services (bare-metal Windows).
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1
 # Opens one window per service, in dependency order:
 #   MySQL (service) -> MinIO -> File Server -> Main API -> Frontend
