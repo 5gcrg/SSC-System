@@ -1,10 +1,14 @@
 ﻿# SSC Event Booking System - start all services (bare-metal Windows).
 # Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1
-# Opens one window per service, in dependency order:
-#   MySQL (service) -> MinIO -> File Server -> Main API -> Frontend
+# Starts every service hidden in the background (no per-service windows),
+# in dependency order: MySQL (service) -> MinIO -> File Server -> Main API
+# -> Frontend, then hands off into scripts\monitor.ps1 for a single live
+# status dashboard. Each service's output goes to logs\<service>.log.
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$logsDir = Join-Path $repo 'logs'
+New-Item -ItemType Directory -Force $logsDir | Out-Null
 
 function Wait-Port([int]$Port, [string]$Name, [int]$TimeoutSec = 90) {
     Write-Host ("  waiting for {0} on port {1}..." -f $Name, $Port) -NoNewline
@@ -49,11 +53,10 @@ if (Test-PortOpen 9000) {
 } else {
     $minioExe = Join-Path $repo 'minio\minio.exe'
     if (-not (Test-Path $minioExe)) { Write-Host "minio.exe not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
-    Start-Process powershell -ArgumentList '-NoExit', '-Command', @"
-`$host.UI.RawUI.WindowTitle = 'SSC - MinIO'
+    Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoLogo', '-NoProfile', '-Command', @"
 `$env:MINIO_ROOT_USER = 'sscadmin'
 `$env:MINIO_ROOT_PASSWORD = 'sscpassword123'
-& '$minioExe' server '$repo\minio\data' --console-address ':9001'
+& '$minioExe' server '$repo\minio\data' --console-address ':9001' *>> '$logsDir\minio.log'
 "@
     if (-not (Wait-Port 9000 'MinIO')) { exit 1 }
 }
@@ -66,10 +69,9 @@ if (Test-PortOpen 8080) {
              Where-Object { $_.Name -notlike '*sources*' } | Select-Object -First 1
     if (-not $fsJar) { Write-Host "File server jar not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
     $javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java' }
-    Start-Process powershell -ArgumentList '-NoExit', '-Command', @"
-`$host.UI.RawUI.WindowTitle = 'SSC - File Server (8080)'
+    Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoLogo', '-NoProfile', '-Command', @"
 Set-Location '$repo\ssc-booking-fileserver'
-& '$javaExe' -jar '$($fsJar.FullName)'
+& '$javaExe' -jar '$($fsJar.FullName)' *>> '$logsDir\fileserver.log'
 "@
     if (-not (Wait-Port 8080 'File Server')) { exit 1 }
 }
@@ -82,10 +84,9 @@ if (Test-PortOpen 8081) {
              Where-Object { $_.Name -notlike '*sources*' } | Select-Object -First 1
     if (-not $beJar) { Write-Host "Backend jar not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1 }
     $javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin\java.exe' } else { 'java' }
-    Start-Process powershell -ArgumentList '-NoExit', '-Command', @"
-`$host.UI.RawUI.WindowTitle = 'SSC - Main API (8081)'
+    Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoLogo', '-NoProfile', '-Command', @"
 Set-Location '$repo\ssc-booking-backend'
-& '$javaExe' -jar '$($beJar.FullName)'
+& '$javaExe' -jar '$($beJar.FullName)' *>> '$logsDir\backend.log'
 "@
     # First start runs all Flyway migrations, allow extra time
     if (-not (Wait-Port 8081 'Main API' 180)) { exit 1 }
@@ -98,16 +99,15 @@ if (Test-PortOpen 3000) {
     if (-not (Test-Path (Join-Path $repo 'ssc-booking-frontend\.next'))) {
         Write-Host "Frontend build not found - run scripts\setup.ps1 first." -ForegroundColor Red; exit 1
     }
-    Start-Process powershell -ArgumentList '-NoExit', '-Command', @"
-`$host.UI.RawUI.WindowTitle = 'SSC - Frontend (3000)'
+    Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoLogo', '-NoProfile', '-Command', @"
 Set-Location '$repo\ssc-booking-frontend'
-npm run start
+npm run start *>> '$logsDir\frontend.log'
 "@
     if (-not (Wait-Port 3000 'Frontend')) { exit 1 }
 }
 
 Write-Host "`n=== All services up ===" -ForegroundColor Green
-Write-Host "Frontend:      http://localhost:3000/login"
-Write-Host "Main API:      http://localhost:8081/api/v1/ping"
-Write-Host "File Server:   http://localhost:8080/actuator/health"
-Write-Host "MinIO console: http://localhost:9001  (sscadmin / sscpassword123)"
+Write-Host "Logs: $logsDir\*.log"
+Write-Host "Launching status dashboard...`n" -ForegroundColor Cyan
+Start-Sleep -Seconds 1
+& (Join-Path $PSScriptRoot 'monitor.ps1')

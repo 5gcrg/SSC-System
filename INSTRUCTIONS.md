@@ -258,9 +258,13 @@ cd C:\SSC-System
 powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1
 ```
 
-Opens one window per service (MinIO → File Server → Main API → Frontend),
-waiting for each dependency to come up first. MySQL runs as the
-**MySQL80** Windows service and is started automatically if stopped.
+Starts each service in the background (MinIO → File Server → Main API →
+Frontend), waiting for each dependency to come up before starting the next
+— no separate windows. MySQL runs as the **MySQL80** Windows service and is
+started automatically if stopped. Once everything is up, it hands off into
+a live terminal status dashboard (same view as `scripts\monitor.ps1`) —
+press `Q` to close the dashboard (services keep running) or `S` to stop
+everything. Each service's console output goes to `logs\<service>.log`.
 
 To stop everything:
 
@@ -311,8 +315,8 @@ start http://localhost:3000/login                  # login page loads  (frontend
 start http://localhost:9001                        # MinIO console (sscadmin / sscpassword123)
 ```
 
-The first backend start runs all Flyway migrations — check its window for
-`Successfully applied ... migrations`.
+The first backend start runs all Flyway migrations — check `logs\backend.log`
+for `Successfully applied ... migrations`.
 
 ---
 
@@ -395,7 +399,7 @@ Flyway applies any new database migrations automatically on backend start.
 | `Port 8081 was already in use` | Another copy is running — run `scripts\stop-all.ps1`, or find it with `netstat -ano \| findstr :8081` and `taskkill /PID <pid> /F` |
 | Backend exits with `Access denied for user 'sscuser'` | Re-run the SQL in step 3.1; confirm with `mysql -u sscuser -psscpassword ssc_booking -e "SELECT 1;"` |
 | Backend exits with Flyway `Migration checksum mismatch` | The database was created by a different code version. For a dev/demo DB the simplest fix is `DROP DATABASE ssc_booking;` then re-run step 3.1 and restart the backend (this deletes all data) |
-| File server: `MinIO ... Connection refused` | MinIO isn't running — start it first (window 1) |
+| File server: `MinIO ... Connection refused` | MinIO isn't running — start it first (`logs\minio.log`, or window 1 if using Option B manual startup) |
 | Frontend shows "Network error — is the backend running?" | Main API isn't up on 8081, or `NEXT_PUBLIC_API_URL` points at the wrong host (rebuild after editing `.env.local`) |
 | Google sign-in rejected | The frontend origin isn't in the OAuth client's authorized JavaScript origins |
 | `mvn` / `java` / `node` not recognized | Reopen PowerShell after installing, or add the install folder to PATH |

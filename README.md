@@ -33,7 +33,7 @@ cd SSC-System
 # 2. One-time setup (DB + MinIO download + builds; asks for MySQL root password)
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 
-# 3. Start everything (one window per service)
+# 3. Start everything (opens a live status dashboard, no per-service windows)
 powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1
 
 # Stop everything
@@ -56,6 +56,12 @@ powershell -ExecutionPolicy Bypass -File scripts\stop-all.ps1
 curl.exe http://localhost:8081/api/v1/ping        # {"status":"UP"}
 curl.exe http://localhost:8080/actuator/health    # {"status":"UP"}
 start http://localhost:3000/login                 # login page loads
+```
+
+Or check status for all 5 services at a glance anytime:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\monitor.ps1
 ```
 
 ## Development mode
