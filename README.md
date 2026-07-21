@@ -47,14 +47,21 @@ backend, file server, and frontend.
 
 ## Running the services
 
-Each service runs in its own terminal:
-
 ```powershell
-minio\minio.exe server minio\data --console-address :9001
-cd ssc-booking-fileserver; java -jar target\*.jar
-cd ssc-booking-backend;    java -jar target\*.jar
-cd ssc-booking-frontend;   npm start
+# Start everything as background processes (no per-service windows) and open a
+# live status dashboard:
+powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1
+
+# Reattach to the dashboard any time (services keep running when you quit it):
+powershell -ExecutionPolicy Bypass -File scripts\monitor.ps1
+
+# Stop everything:
+powershell -ExecutionPolicy Bypass -File scripts\stop-all.ps1
 ```
+
+The monitor dashboard auto-refreshes and lets you restart all services, restart one specific
+service, or stop all, without leaving it. Logs for each service are written to `logs\<name>.log`
+/ `logs\<name>.err.log`.
 
 ## Test it's running
 
