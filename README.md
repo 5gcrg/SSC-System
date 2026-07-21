@@ -29,10 +29,11 @@ cd SSC-System
 powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1
 ```
 
-`scripts\SETUP.ps1` installs Git, a JDK 21, Maven, Node.js LTS, and MySQL via
-[Chocolatey](https://chocolatey.org/) (bootstrapping Chocolatey itself if it isn't already
-installed), then provisions the `ssc_booking` database, downloads the MinIO server binary, and
-builds the backend, file server, and frontend.
+`scripts\SETUP.ps1` first checks whether Git, a JDK 21, Maven, Node.js, and MySQL are already
+installed (by any method, not just Chocolatey) and only installs whatever's missing via
+[Chocolatey](https://chocolatey.org/) (bootstrapping Chocolatey itself if needed). It then
+provisions the `ssc_booking` database, downloads the MinIO server binary, and builds the
+backend, file server, and frontend.
 
 ## Services
 

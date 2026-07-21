@@ -29,53 +29,77 @@ if (-not $isAdmin) {
     exit 1
 }
 
-# --- 1. Chocolatey + prerequisites ---------------------------------------------
-Write-Host "`n[1/7] Checking Chocolatey..." -ForegroundColor Cyan
-if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-    Write-Host "  Chocolatey not found - installing..."
-    Set-ExecutionPolicy Bypass -Scope Process -Force
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
-    Invoke-Expression ((New-Object Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-        Write-Host "Chocolatey install did not put 'choco' on PATH. Open a new PowerShell window and re-run this script." -ForegroundColor Red
-        exit 1
-    }
-} else {
-    Write-Host "  OK   choco"
-}
+# --- 1. Check prerequisites (any install method - not just Chocolatey) ------------
+Write-Host "`n[1/6] Checking prerequisites..." -ForegroundColor Cyan
 
-Write-Host "`n[2/7] Installing prerequisites via Chocolatey (git, JDK 21, Maven, Node.js LTS, MySQL)..." -ForegroundColor Cyan
-choco install git temurin21 maven nodejs-lts mysql -y
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Chocolatey package install failed - see output above." -ForegroundColor Red
-    exit 1
-}
-
-# Refresh PATH in this process so freshly-installed tools are usable without a new shell.
-$chocoProfile = Join-Path $env:ChocolateyInstall 'helpers\chocolateyProfile.psm1'
-if (Test-Path $chocoProfile) {
-    Import-Module $chocoProfile
-    refreshenv | Out-Null
+# Command name -> Chocolatey package id, only used for whichever ones are missing.
+$tools = [ordered]@{
+    'git'   = 'git'
+    'java'  = 'temurin21'
+    'mvn'   = 'maven'
+    'node'  = 'nodejs-lts'
+    'mysql' = 'mysql'
 }
 
 $missing = @()
-foreach ($tool in @('git', 'java', 'mvn', 'node', 'npm', 'mysql')) {
-    if (Get-Command $tool -ErrorAction SilentlyContinue) {
-        Write-Host ("  OK   {0}" -f $tool)
+foreach ($cmd in $tools.Keys) {
+    if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+        Write-Host ("  OK      {0}" -f $cmd)
     } else {
-        Write-Host ("  MISS {0}" -f $tool) -ForegroundColor Red
-        $missing += $tool
+        Write-Host ("  MISSING {0}" -f $cmd) -ForegroundColor Yellow
+        $missing += $cmd
     }
 }
-if ($missing.Count -gt 0) {
-    Write-Host "`nStill missing after install: $($missing -join ', ')" -ForegroundColor Red
-    Write-Host "Close this window, open a new (Administrator) PowerShell, and re-run this script -"
-    Write-Host "Chocolatey sometimes needs a fresh shell to pick up PATH changes."
-    exit 1
+
+if ($missing.Count -eq 0) {
+    Write-Host "  All prerequisites already installed - nothing to download." -ForegroundColor Green
+} else {
+    $packages = $missing | ForEach-Object { $tools[$_] }
+    Write-Host ("`n  Missing: {0} -> will install via Chocolatey: {1}" -f ($missing -join ', '), ($packages -join ', ')) -ForegroundColor Yellow
+
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+        Write-Host "  Chocolatey not found - installing..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+        Invoke-Expression ((New-Object Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+            Write-Host "Chocolatey install did not put 'choco' on PATH. Open a new PowerShell window and re-run this script." -ForegroundColor Red
+            exit 1
+        }
+    }
+
+    choco install @packages -y
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Chocolatey package install failed - see output above." -ForegroundColor Red
+        exit 1
+    }
+
+    # Refresh PATH in this process so freshly-installed tools are usable without a new shell.
+    $chocoProfile = Join-Path $env:ChocolateyInstall 'helpers\chocolateyProfile.psm1'
+    if (Test-Path $chocoProfile) {
+        Import-Module $chocoProfile
+        refreshenv | Out-Null
+    }
+
+    $stillMissing = @()
+    foreach ($cmd in $missing) {
+        if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+            Write-Host ("  OK      {0}" -f $cmd)
+        } else {
+            Write-Host ("  MISS    {0}" -f $cmd) -ForegroundColor Red
+            $stillMissing += $cmd
+        }
+    }
+    if ($stillMissing.Count -gt 0) {
+        Write-Host "`nStill missing after install: $($stillMissing -join ', ')" -ForegroundColor Red
+        Write-Host "Close this window, open a new (Administrator) PowerShell, and re-run this script -"
+        Write-Host "Chocolatey sometimes needs a fresh shell to pick up PATH changes."
+        exit 1
+    }
 }
 
 # --- 2. Submodules ---------------------------------------------------------------
-Write-Host "`n[3/7] Checking submodules..." -ForegroundColor Cyan
+Write-Host "`n[2/6] Checking submodules..." -ForegroundColor Cyan
 if (-not (Test-Path (Join-Path $repo 'ssc-booking-backend\pom.xml'))) {
     Write-Host "  Submodules are empty. Running: git submodule update --init" -ForegroundColor Yellow
     Push-Location $repo
@@ -86,7 +110,7 @@ if (-not (Test-Path (Join-Path $repo 'ssc-booking-backend\pom.xml'))) {
 }
 
 # --- 3. MySQL database + user -----------------------------------------------------
-Write-Host "`n[4/7] Creating MySQL database 'ssc_booking' and user 'sscuser'..." -ForegroundColor Cyan
+Write-Host "`n[3/6] Creating MySQL database 'ssc_booking' and user 'sscuser'..." -ForegroundColor Cyan
 if ($null -eq $MySqlRootPassword) {
     $rootPwd = Read-Host "Enter your MySQL root password (blank if none)" -AsSecureString
     $MySqlRootPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
@@ -113,7 +137,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "  Database ready. (Tables are created by Flyway on first backend start.)"
 
 # --- 4. MinIO -----------------------------------------------------------------------
-Write-Host "`n[5/7] Setting up MinIO..." -ForegroundColor Cyan
+Write-Host "`n[4/6] Setting up MinIO..." -ForegroundColor Cyan
 $minioDir = Join-Path $repo 'minio'
 $minioExe = Join-Path $minioDir 'minio.exe'
 New-Item -ItemType Directory -Force (Join-Path $minioDir 'data') | Out-Null
@@ -127,7 +151,7 @@ if (Test-Path $minioExe) {
 }
 
 # --- 5. Build backend + fileserver ---------------------------------------------------
-Write-Host "`n[6/7] Building Main API and File Server (downloads Maven deps on first run)..." -ForegroundColor Cyan
+Write-Host "`n[5/6] Building Main API and File Server (downloads Maven deps on first run)..." -ForegroundColor Cyan
 Push-Location (Join-Path $repo 'ssc-booking-backend')
 mvn -q clean package -DskipTests
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Backend build failed." -ForegroundColor Red; exit 1 }
@@ -141,7 +165,7 @@ Pop-Location
 Write-Host "  File server jar built."
 
 # --- 6. Frontend ----------------------------------------------------------------------
-Write-Host "`n[7/7] Installing and building the frontend..." -ForegroundColor Cyan
+Write-Host "`n[6/6] Installing and building the frontend..." -ForegroundColor Cyan
 Push-Location (Join-Path $repo 'ssc-booking-frontend')
 if ((-not (Test-Path '.env.local')) -and (Test-Path '.env.local.example')) {
     Copy-Item '.env.local.example' '.env.local'
