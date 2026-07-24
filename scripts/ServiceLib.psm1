@@ -32,10 +32,15 @@ function Get-SscLaunchSpec([string]$Name) {
 
     switch ($Name) {
         'minio' {
-            New-Item -ItemType Directory -Force (Join-Path $RepoRoot 'minio\data') | Out-Null
+            New-Item -ItemType Directory -Force (Join-Path $RepoRoot '.tools\minio-data') | Out-Null
+            # Root credentials must match the fileserver's minio.access-key/secret-key
+            # (ssc-booking-fileserver\src\main\resources\application.yml); without them
+            # MinIO falls back to minioadmin/minioadmin and every upload is rejected.
+            $env:MINIO_ROOT_USER = if ($env:MINIO_ACCESS_KEY) { $env:MINIO_ACCESS_KEY } else { 'sscadmin' }
+            $env:MINIO_ROOT_PASSWORD = if ($env:MINIO_SECRET_KEY) { $env:MINIO_SECRET_KEY } else { 'sscpassword123' }
             return @{
-                FilePath         = Join-Path $RepoRoot 'minio\minio.exe'
-                ArgumentList     = @('server', (Join-Path $RepoRoot 'minio\data'), '--console-address', ':9001')
+                FilePath         = Join-Path $RepoRoot '.tools\minio.exe'
+                ArgumentList     = @('server', (Join-Path $RepoRoot '.tools\minio-data'), '--console-address', ':9001')
                 WorkingDirectory = $RepoRoot
             }
         }

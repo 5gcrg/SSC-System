@@ -138,9 +138,9 @@ Write-Host "  Database ready. (Tables are created by Flyway on first backend sta
 
 # --- 4. MinIO -----------------------------------------------------------------------
 Write-Host "`n[4/6] Setting up MinIO..." -ForegroundColor Cyan
-$minioDir = Join-Path $repo 'minio'
+$minioDir = Join-Path $repo '.tools'
 $minioExe = Join-Path $minioDir 'minio.exe'
-New-Item -ItemType Directory -Force (Join-Path $minioDir 'data') | Out-Null
+New-Item -ItemType Directory -Force (Join-Path $minioDir 'minio-data') | Out-Null
 if (Test-Path $minioExe) {
     Write-Host "  minio.exe already present."
 } else {
@@ -179,7 +179,7 @@ Pop-Location
 
 Write-Host "`n=== Setup complete ===" -ForegroundColor Green
 Write-Host "Start each service in its own terminal:"
-Write-Host "  minio\minio.exe server minio\data --console-address :9001"
+Write-Host "  .tools\minio.exe server .tools\minio-data --console-address :9001   (set MINIO_ROOT_USER=sscadmin, MINIO_ROOT_PASSWORD=sscpassword123)"
 Write-Host "  cd ssc-booking-fileserver; java -jar target\*.jar"
 Write-Host "  cd ssc-booking-backend;    java -jar target\*.jar"
 Write-Host "  cd ssc-booking-frontend;   npm start"
