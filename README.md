@@ -91,8 +91,13 @@ mvn spring-boot:run
 
 - **Database schema** is fully managed by Flyway — the first backend start creates all tables
   and seed data automatically.
-- **MinIO buckets** (`ssc-documents`, `ssc-templates`) are created automatically by the file
-  server on startup.
+- **MinIO buckets** (`ssc-documents`, `ssc-templates`, `ssc-projects`) are created
+  automatically by the file server on startup.
+- **External integrations** use `X-API-Key` headers: the backend exposes a read-only
+  masterlist/departments/organizations surface (`MASTERLIST_CLIENT_n_*` env vars), and the
+  file server exposes per-client project storage scoped to `projects/<folder>/` in
+  `ssc-projects` (`PROJECT_CLIENT_n_*` env vars). See each service's README and
+  `.env.example` for details.
 - **JWT secret** must be identical in `ssc-booking-backend` and `ssc-booking-fileserver`
   (`app.jwt.secret` in each `application.yml`); the committed dev defaults already match.
 - **Serving other computers on the network:** rebuild the frontend with the server's LAN IP in
