@@ -3,7 +3,9 @@
 export MSYS2_ARG_CONV_EXCL="*"
 export MSYS_NO_PATHCONV=1
 
-S="$(dirname "$0")"
+# Native Windows path (not POSIX /c/...): MSYS2_ARG_CONV_EXCL="*" above disables the
+# automatic POSIX->Windows conversion curl.exe otherwise relies on for -F file=@path args.
+S="$(cygpath -w "$(dirname "$0")")"
 B=http://localhost:8081/api/v1/integration
 PUB=http://localhost:8081/api/v1
 F=http://localhost:8080/api/v1/integration/files
