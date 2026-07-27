@@ -6,4 +6,4 @@
 	url = https://github.com/5gcrg/SSC-Event-System-Backend.git
 [submodule "ssc-booking-fileserver"]
 	path = ssc-booking-fileserver
-	url = https://github.com/Radzuuuu/expert-funicular.git
+	url = https://github.com/5gcrg/ssc-booking-fileserver.git
