@@ -3,12 +3,20 @@
 export MSYS2_ARG_CONV_EXCL="*"
 export MSYS_NO_PATHCONV=1
 
+# Source root .env (if present) so BACKEND_PORT/FILESERVER_PORT reflect local overrides.
+ROOT_ENV="$(dirname "$0")/../.env"
+if [ -f "$ROOT_ENV" ]; then
+  set -a
+  source "$ROOT_ENV"
+  set +a
+fi
+
 # Native Windows path (not POSIX /c/...): MSYS2_ARG_CONV_EXCL="*" above disables the
 # automatic POSIX->Windows conversion curl.exe otherwise relies on for -F file=@path args.
 S="$(cygpath -w "$(dirname "$0")")"
-B=http://localhost:8081/api/v1/integration
-PUB=http://localhost:8081/api/v1
-F=http://localhost:8080/api/v1/integration/files
+B=http://localhost:${BACKEND_PORT:-8081}/api/v1/integration
+PUB=http://localhost:${BACKEND_PORT:-8081}/api/v1
+F=http://localhost:${FILESERVER_PORT:-8080}/api/v1/integration/files
 LEGACY="legacy-key-0000111122223333"
 SENS="test-key-s-aaaabbbbccccdddd"
 A="test-key-a-0123456789abcdef"
@@ -84,9 +92,9 @@ echo "$p2" | grep -q 'docs/readme.md' && echo "$p2" | grep -q '"truncated":false
 check "delete"                           204 "$(code -X DELETE -H "X-API-Key: $A" "$F?path=docs/readme.md")"
 check "delete again (idempotent)"        204 "$(code -X DELETE -H "X-API-Key: $A" "$F?path=docs/readme.md")"
 check "url after delete"                 404 "$(code -H "X-API-Key: $A" "$F/url?path=docs/readme.md")"
-check "JWT-gated /api/v1/files no auth"  403 "$(code "http://localhost:8080/api/v1/files/documents/url?objectKey=x")"
-check "fileserver health"                200 "$(code http://localhost:8080/actuator/health)"
-check "backend ping"                     200 "$(code http://localhost:8081/api/v1/ping)"
+check "JWT-gated /api/v1/files no auth"  403 "$(code "http://localhost:${FILESERVER_PORT:-8080}/api/v1/files/documents/url?objectKey=x")"
+check "fileserver health"                200 "$(code http://localhost:${FILESERVER_PORT:-8080}/actuator/health)"
+check "backend ping"                     200 "$(code http://localhost:${BACKEND_PORT:-8081}/api/v1/ping)"
 
 # cleanup test objects
 curl -s -o /dev/null -X DELETE -H "X-API-Key: $A" "$F?path=builds/v1/app.zip"
