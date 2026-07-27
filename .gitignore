@@ -1,4 +1,5 @@
 .env
+SSC_API_INTEGRATION_MANUAL*.md
 */target/
 */node_modules/
 */.next/
