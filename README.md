@@ -63,6 +63,30 @@ The monitor dashboard auto-refreshes and lets you restart all services, restart 
 service, or stop all, without leaving it. Logs for each service are written to `logs\<name>.log`
 / `logs\<name>.err.log`.
 
+## Local dev on alternate ports
+
+The ports above are the checked-in defaults and match what the real server deployment expects —
+they never change. If they clash with another project already running on your machine, override
+them per-machine via a gitignored root `.env` (see the commented example block at the bottom of
+`.env.example` for a ready-made 9003-9007 scheme):
+
+```
+BACKEND_PORT=9004
+FILESERVER_PORT=9005
+FRONTEND_PORT=9003
+MINIO_PORT=9006
+MINIO_CONSOLE_PORT=9007
+ALLOWED_ORIGINS=http://localhost:9003,http://localhost:9004
+NEXT_PUBLIC_API_URL=http://localhost:9004
+NEXT_PUBLIC_FILESERVER_URL=http://localhost:9005
+```
+
+Also set `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_FILESERVER_URL` in
+`ssc-booking-frontend\.env.local` to match, then rebuild the frontend (`npm run build`) —
+`NEXT_PUBLIC_*` values are baked in at build time. `scripts\ServiceLib.psm1` loads the root
+`.env` into the process environment before computing each service's port and passes it through
+to `start-all.ps1` / `stop-all.ps1` / `monitor.ps1` automatically; nothing else needs editing.
+
 ## Test it's running
 
 ```powershell
