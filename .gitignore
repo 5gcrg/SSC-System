@@ -1,14 +1,16 @@
 .env
+SSC_API_INTEGRATION_MANUAL*.md
 */target/
 */node_modules/
 */.next/
 */dist/
 *.log
 
-# Bare-metal local installs and runtime files (created by scripts/setup.ps1 or manual setup)
+# Bare-metal local installs and runtime files (created by scripts/SETUP.ps1 or manual setup)
 minio/
 mysql/
 nssm/
 logs/
+.run/
 migration-backup/
 mysql-*.zip

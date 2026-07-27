@@ -1,23 +1,9 @@
-﻿# SSC Event Booking System — stop all app services.
-# Stops whatever is listening on the app ports (3000, 8080, 8081, 9000).
-# Leaves the MySQL Windows service running (stop it via services.msc if needed).
+# Stops all SSC System background services started by start-all.ps1 / monitor.ps1.
+#   powershell -ExecutionPolicy Bypass -File scripts\stop-all.ps1
 
-$ports = @(3000, 8080, 8081, 9000)
+$ErrorActionPreference = 'Stop'
+Import-Module (Join-Path $PSScriptRoot 'ServiceLib.psm1') -Force
 
-foreach ($port in $ports) {
-    $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-    if (-not $conns) {
-        Write-Host ("Port {0}: nothing running." -f $port)
-        continue
-    }
-    $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
-    foreach ($procId in $pids) {
-        $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
-        if ($proc) {
-            Write-Host ("Port {0}: stopping {1} (PID {2})" -f $port, $proc.ProcessName, $procId)
-            Stop-Process -Id $procId -Force -Confirm:$false
-        }
-    }
-}
-
-Write-Host "Done. (MySQL service left running.)"
+Write-Host "=== Stopping SSC System services ===" -ForegroundColor Cyan
+Stop-AllSscServices
+Write-Host "`nAll services stopped." -ForegroundColor Green

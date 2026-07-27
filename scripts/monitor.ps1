@@ -1,127 +1,68 @@
-﻿# SSC System - Terminal Monitor (XAMPP-style status dashboard)
-# Run from the repo root:  powershell -ExecutionPolicy Bypass -File scripts\monitor.ps1
+# Live status dashboard for the SSC System's background services. Auto-refreshes,
+# and lets you restart all services, restart one specific service, or stop all -
+# without needing separate start-all.ps1/stop-all.ps1 calls.
+#   powershell -ExecutionPolicy Bypass -File scripts\monitor.ps1
 #
-# Standalone, read-only status view - works no matter how the services were
-# started (start-all.ps1, the browser dashboard, manually, or later as
-# Windows services). Never starts or stops anything on its own; press S if
-# you explicitly want to stop everything, or Q / Ctrl+C to just close this
-# view and leave services running.
+# Can be run standalone at any time to reattach to whatever's already running -
+# status is read from .run\*.json + a live process/port check, not tied to how
+# the services were originally started.
 
 $ErrorActionPreference = 'Stop'
-$RefreshSeconds = 2
+Import-Module (Join-Path $PSScriptRoot 'ServiceLib.psm1') -Force
 
-$SERVICES = @(
-    @{ Name = 'MySQL';       Port = 3306; Url = 'localhost:3306';                       IsWindowsService = $true  }
-    @{ Name = 'MinIO';       Port = 9000; Url = 'http://localhost:9001 (console)';       IsWindowsService = $false }
-    @{ Name = 'File Server'; Port = 8080; Url = 'http://localhost:8080/actuator/health'; IsWindowsService = $false }
-    @{ Name = 'Main API';    Port = 8081; Url = 'http://localhost:8081/api/v1/ping';     IsWindowsService = $false }
-    @{ Name = 'Frontend';    Port = 3000; Url = 'http://localhost:3000/login';           IsWindowsService = $false }
-)
-
-function Test-PortOpen([int]$Port) {
-    $client = New-Object Net.Sockets.TcpClient
-    try { $client.Connect('127.0.0.1', $Port); return $client.Connected }
-    catch { return $false }
-    finally { $client.Dispose() }
-}
-
-function Get-PortOwnerPid([int]$Port) {
-    $conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($conn) { return $conn.OwningProcess }
+function Read-KeyWithTimeout([int]$TimeoutSeconds) {
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
+        if ([Console]::KeyAvailable) {
+            return [Console]::ReadKey($true)
+        }
+        Start-Sleep -Milliseconds 200
+    }
     return $null
 }
 
-function Stop-AllServices {
-    Write-Host "`nStopping app services (MySQL left running)..." -ForegroundColor Yellow
-    foreach ($port in @(3000, 8080, 8081, 9000)) {
-        $conns = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-        foreach ($procId in ($conns | Select-Object -ExpandProperty OwningProcess -Unique)) {
-            $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
-            if ($proc) {
-                Write-Host ("  Port {0}: stopping {1} (PID {2})" -f $port, $proc.ProcessName, $procId)
-                Stop-Process -Id $procId -Force -Confirm:$false -ErrorAction SilentlyContinue
-            }
-        }
-    }
-    Write-Host "Done.`n" -ForegroundColor Green
-}
-
-function Draw-Dashboard {
+function Show-Dashboard {
     Clear-Host
-    Write-Host ''
-    Write-Host '  ===========================================' -ForegroundColor Cyan
-    Write-Host '   SSC System - Service Monitor' -ForegroundColor Cyan
-    Write-Host '  ===========================================' -ForegroundColor Cyan
-    Write-Host ("   {0}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')) -ForegroundColor DarkGray
-    Write-Host ''
+    Write-Host "=== SSC System Monitor ===" -ForegroundColor Cyan
+    Write-Host "Updated: $(Get-Date -Format 'HH:mm:ss')`n"
 
-    $nameW = 14; $portW = 6; $statusW = 10; $pidW = 8
-    Write-Host ('  ' + 'SERVICE'.PadRight($nameW) + 'PORT'.PadRight($portW) + 'STATUS'.PadRight($statusW) + 'PID'.PadRight($pidW) + 'URL') -ForegroundColor White
-    Write-Host ('  ' + ('-' * 76)) -ForegroundColor DarkGray
+    Get-SscServiceNames | ForEach-Object { Get-SscServiceStatus $_ } |
+        Format-Table -Property Name, Status, ProcessId, Port -AutoSize | Out-Host
 
-    foreach ($svc in $SERVICES) {
-        $portUp = Test-PortOpen -Port $svc.Port
-        $ownerPid = Get-PortOwnerPid -Port $svc.Port
-
-        if ($svc.IsWindowsService) {
-            $winSvc = Get-Service -Name 'MySQL*' -ErrorAction SilentlyContinue | Select-Object -First 1
-            $running = ($winSvc -and $winSvc.Status -eq 'Running') -or $portUp
-        } else {
-            $running = $portUp
-        }
-
-        Write-Host ('  ' + $svc.Name.PadRight($nameW)) -NoNewline
-        Write-Host ($svc.Port.ToString().PadRight($portW)) -NoNewline
-        if ($running) {
-            Write-Host 'RUNNING'.PadRight($statusW) -NoNewline -ForegroundColor Green
-        } else {
-            Write-Host 'STOPPED'.PadRight($statusW) -NoNewline -ForegroundColor Red
-        }
-        Write-Host ($(if ($ownerPid) { $ownerPid.ToString() } else { '-' }).PadRight($pidW)) -NoNewline
-        Write-Host $svc.Url
-    }
-
-    Write-Host ''
-    Write-Host ('  ' + ('-' * 76)) -ForegroundColor DarkGray
-    Write-Host '  [Q] quit monitor (services keep running)   [S] stop all services   [R] refresh now' -ForegroundColor DarkGray
-    Write-Host ("  Refreshing every {0}s..." -f $RefreshSeconds) -ForegroundColor DarkGray
+    Write-Host "[1] Restart ALL   [2] Restart one   [3] Stop ALL   [4] Refresh now   [Q] Quit monitor (services keep running)"
 }
 
-# --- Main loop -----------------------------------------------------------------
-try {
-    $canReadKeys = $true
-    while ($true) {
-        Draw-Dashboard
+while ($true) {
+    Show-Dashboard
+    $key = Read-KeyWithTimeout -TimeoutSeconds 5
+    if ($null -eq $key) { continue }
 
-        $waitedMs = 0
-        $refreshMs = $RefreshSeconds * 1000
-        $keyPressed = $null
-        while ($canReadKeys -and $waitedMs -lt $refreshMs) {
-            try {
-                if ([Console]::KeyAvailable) {
-                    $keyPressed = [Console]::ReadKey($true)
-                    break
-                }
-            } catch [System.InvalidOperationException] {
-                # No console input available (redirected/non-interactive session,
-                # e.g. a scheduled task) - fall back to a display-only refresh loop.
-                $canReadKeys = $false
-                break
-            }
-            Start-Sleep -Milliseconds 200
-            $waitedMs += 200
+    switch ($key.KeyChar.ToString().ToUpperInvariant()) {
+        '1' {
+            Write-Host "`nRestarting all services...`n" -ForegroundColor Yellow
+            Restart-AllSscServices
+            Start-Sleep -Seconds 2
         }
-        if (-not $canReadKeys) { Start-Sleep -Seconds $RefreshSeconds }
-
-        if ($null -ne $keyPressed) {
-            switch ($keyPressed.Key) {
-                'Q' { Write-Host "`nExiting monitor. Services are untouched." -ForegroundColor Cyan; exit 0 }
-                'S' { Stop-AllServices; exit 0 }
-                'R' { continue }
-                default { continue }
+        '2' {
+            $names = Get-SscServiceNames
+            Write-Host ("`nWhich service? ({0})" -f ($names -join ', '))
+            $choice = Read-Host 'Name'
+            if ($names -contains $choice) {
+                Write-Host "`nRestarting $choice...`n" -ForegroundColor Yellow
+                Restart-SscService $choice
+                Start-Sleep -Seconds 2
+            } else {
+                Write-Host "`nUnknown service '$choice'." -ForegroundColor Red
+                Start-Sleep -Seconds 1
             }
         }
+        '3' {
+            Write-Host "`nStopping all services...`n" -ForegroundColor Yellow
+            Stop-AllSscServices
+            Start-Sleep -Seconds 2
+        }
+        '4' { }
+        'Q' { Write-Host "`nExiting monitor (services keep running in the background)." -ForegroundColor Cyan; return }
+        default { }
     }
-} finally {
-    try { [Console]::CursorVisible = $true } catch {}
 }
