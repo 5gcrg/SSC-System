@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSC System — Service Dashboard</title>
+  <meta name="description" content="Service management dashboard for the SSC Event Booking System">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #07090f;
+      --bg-2:         #0c1020;
+      --bg-3:         #111827;
+      --glass:        rgba(13, 20, 38, 0.75);
+      --glass-border: rgba(255,255,255,0.07);
+      --glass-hover:  rgba(255,255,255,0.12);
+      --text-1:       #f1f5f9;
+      --text-2:       #94a3b8;
+      --text-3:       #475569;
+      --accent:       #6366f1;
+      --accent-dim:   rgba(99,102,241,0.12);
+
+      --s-online:   #22c55e;
+      --s-starting: #f59e0b;
+      --s-stopped:  #475569;
+      --s-error:    #ef4444;
+
+      --c-mysql:      #3b82f6;
+      --c-minio:      #ef4444;
+      --c-fileserver: #f59e0b;
+      --c-backend:    #8b5cf6;
+      --c-frontend:   #10b981;
+
+      --radius:    14px;
+      --radius-sm:  8px;
+      --ease:      cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient glow */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% -5%,  rgba(99,102,241,0.09) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 35% at 85% 105%, rgba(16,185,129,0.07) 0%, transparent 65%);
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────────── */
+    #app {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px;
+      height: 58px;
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(7,9,15,0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+      box-shadow: 0 0 18px rgba(99,102,241,0.35);
+    }
+    .logo-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-1);
+      letter-spacing: -0.3px;
+    }
+    .logo-sub {
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 400;
+      letter-spacing: 0.2px;
+    }
+
+    .h-spacer { flex: 1; }
+
+    /* Online pill */
+    .online-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      font-size: 12px;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+    .online-pill-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--s-online);
+    }
+
+    /* WS indicator */
+    .ws-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .ws-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--s-stopped);
+      transition: background 300ms var(--ease);
+    }
+    .ws-pill.live .ws-dot { background: var(--s-online); }
+    .ws-pill.live { color: var(--text-2); }
+
+    /* Header buttons */
+    .btn-group { display: flex; gap: 7px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: transform 150ms var(--ease), background 150ms var(--ease),
+                  box-shadow 150ms var(--ease);
+      outline: none;
+      letter-spacing: 0.1px;
+    }
+    .btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+    .btn svg { width: 13px; height: 13px; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: rgba(255,255,255,0.1);
+    }
+    .btn-primary:hover  { background: #5558e8; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,102,241,0.4); }
+    .btn-primary:active { transform: none; }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border-color: rgba(239,68,68,0.22);
+    }
+    .btn-danger:hover  { background: rgba(239,68,68,0.22); transform: translateY(-1px); }
+    .btn-danger:active { transform: none; }
+
+    /* ── Cards Section ───────────────────────────────────────────────────── */
+    .cards-section {
+      flex-shrink: 0;
+      padding: 16px 20px 12px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 1100px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width:  720px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    /* ── Service Card ─────────────────────────────────────────────────────── */
+    .svc-card {
+      position: relative;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 16px 16px 14px;
+      cursor: pointer;
+      transition: transform 180ms var(--ease), border-color 180ms var(--ease),
+                  box-shadow 180ms var(--ease);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Colored accent bar */
+    .svc-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--svc-color, var(--accent));
+    }
+
+    /* Inner glow on hover */
+    .svc-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity 200ms var(--ease);
+      background: radial-gradient(circle at 50% 0%, var(--svc-color, var(--accent)), transparent 70%);
+      pointer-events: none;
+    }
+
+    .svc-card:hover { transform: translateY(-3px); border-color: var(--glass-hover); }
+    .svc-card:hover::after { opacity: 0.06; }
+
+    .svc-card.selected-log {
+      border-color: var(--svc-color, var(--accent)) !important;
+      box-shadow: 0 0 0 1px var(--svc-color, var(--accent)), 0 6px 28px rgba(0,0,0,0.35);
+    }
+    .svc-card.selected-log::after { opacity: 0.08; }
+
+    .card-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .card-icon-wrap {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.055);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    /* Status indicator */
+    .status-ring {
+      position: relative;
+      width: 10px; height: 10px;
+      margin-top: 3px;
+    }
+    .ring-core {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--ring-c, var(--s-stopped));
+      transition: background 300ms var(--ease);
+    }
+    .ring-pulse {
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: var(--ring-c, var(--s-online));
+      opacity: 0;
+    }
+    .status-ring.is-online .ring-pulse { animation: ring-pulse 2.2s ease-out infinite; }
+
+    @keyframes ring-pulse {
+      0%   { opacity: 0.6; transform: scale(1); }
+      100% { opacity: 0;   transform: scale(2.6); }
+    }
+
+    .status-ring.is-starting .ring-core { animation: blink 0.9s ease-in-out infinite; }
+    @keyframes blink { 50% { opacity: 0.3; } }
+
+    .card-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+    .card-port {
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 1px;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      border: 1px solid;
+      margin: 9px 0 10px;
+      transition: color 250ms, background 250ms, border-color 250ms;
+    }
+    .status-badge.online  { color: var(--s-online);   background: rgba(34,197,94,0.1);   border-color: rgba(34,197,94,0.28);   }
+    .status-badge.starting{ color: var(--s-starting); background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.28); }
+    .status-badge.stopped { color: var(--s-stopped);  background: rgba(71,85,105,0.12);  border-color: rgba(71,85,105,0.22);  }
+    .status-badge.error   { color: var(--s-error);    background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.25);  }
+
+    /* Links */
+    .card-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 11px;
+    }
+    .card-link {
+      font-size: 10.5px;
+      color: var(--text-3);
+      text-decoration: none;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.03);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: color 150ms, border-color 150ms, background 150ms;
+    }
+    .card-link:hover {
+      color: var(--svc-color, var(--accent));
+      border-color: var(--svc-color, var(--accent));
+      background: rgba(255,255,255,0.07);
+    }
+
+    /* Card action buttons */
+    .card-actions { display: flex; gap: 5px; }
+
+    .btn-svc {
+      flex: 1;
+      padding: 6px 0;
+      border-radius: 7px;
+      border: 1px solid;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: transform 140ms var(--ease), background 140ms var(--ease);
+      letter-spacing: 0.1px;
+    }
+    .btn-svc:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+    .btn-svc:not(:disabled):active { transform: scale(0.97); }
+
+    .btn-svc-start {
+      background: rgba(99,102,241,0.1);
+      color: #818cf8;
+      border-color: rgba(99,102,241,0.22);
+    }
+    .btn-svc-start:not(:disabled):hover { background: rgba(99,102,241,0.22); transform: translateY(-1px); }
+
+    .btn-svc-stop {
+      background: rgba(239,68,68,0.08);
+      color: #f87171;
+      border-color: rgba(239,68,68,0.18);
+    }
+    .btn-svc-stop:not(:disabled):hover { background: rgba(239,68,68,0.18); transform: translateY(-1px); }
+
+    .btn-svc-log {
+      padding: 6px 9px;
+      flex: 0;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-3);
+      border-color: var(--glass-border);
+      font-size: 14px;
+      line-height: 1;
+    }
+    .btn-svc-log:hover { background: rgba(255,255,255,0.09); color: var(--text-2); }
+
+    /* ── Log Section ─────────────────────────────────────────────────────── */
+    .log-section {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      margin: 0 20px 18px;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: rgba(7, 10, 18, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Tab bar */
+    .log-tabbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: stretch;
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(5,8,14,0.6);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .log-tabbar::-webkit-scrollbar { display: none; }
+
+    .log-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px;
+      height: 38px;
+      border: none;
+      border-right: 1px solid var(--glass-border);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--text-3);
+      background: transparent;
+      white-space: nowrap;
+      transition: color 150ms, background 150ms;
+      flex-shrink: 0;
+    }
+    .log-tab:hover  { color: var(--text-2); background: rgba(255,255,255,0.03); }
+    .log-tab.active { color: var(--text-1); background: rgba(255,255,255,0.055); }
+
+    .tab-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tab-spacer { flex: 1; }
+
+    /* Log toolbar */
+    .log-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+
+    .btn-toolbar {
+      padding: 4px 9px;
+      border-radius: 5px;
+      border: 1px solid var(--glass-border);
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      background: rgba(255,255,255,0.03);
+      color: var(--text-3);
+      transition: color 140ms, background 140ms;
+      white-space: nowrap;
+    }
+    .btn-toolbar:hover { background: rgba(255,255,255,0.07); color: var(--text-2); }
+    .btn-toolbar.active {
+      background: rgba(99,102,241,0.1);
+      color: #818cf8;
+      border-color: rgba(99,102,241,0.25);
+    }
+
+    /* Terminal */
+    .log-terminal {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 10px 16px 12px;
+      font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 11.5px;
+      line-height: 1.65;
+      color: #8899b4;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-terminal::-webkit-scrollbar { width: 5px; }
+    .log-terminal::-webkit-scrollbar-track { background: transparent; }
+    .log-terminal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    .log-terminal::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+    .log-empty {
+      color: var(--text-3);
+      font-style: italic;
+      text-align: center;
+      padding: 28px 0;
+      font-family: inherit;
+      font-size: 12px;
+    }
+
+    /* ANSI color classes */
+    .ansi-bold    { font-weight: 700; color: var(--text-1); }
+    .ansi-dim     { opacity: 0.55; }
+    .ansi-red     { color: #f87171; } .ansi-bright-red     { color: #fca5a5; }
+    .ansi-green   { color: #4ade80; } .ansi-bright-green   { color: #86efac; }
+    .ansi-yellow  { color: #fbbf24; } .ansi-bright-yellow  { color: #fde68a; }
+    .ansi-blue    { color: #60a5fa; } .ansi-bright-blue    { color: #93c5fd; }
+    .ansi-magenta { color: #c084fc; } .ansi-bright-magenta { color: #e879f9; }
+    .ansi-cyan    { color: #22d3ee; } .ansi-bright-cyan    { color: #67e8f9; }
+    .ansi-white   { color: #e2e8f0; } .ansi-bright-white   { color: #ffffff; }
+
+    /* ── Loading screen ─────────────────────────────────────────────────── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      z-index: 999;
+      transition: opacity 400ms var(--ease);
+    }
+    #loading.fade-out { opacity: 0; pointer-events: none; }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2.5px solid rgba(99,102,241,0.18);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-title { font-size: 15px; font-weight: 600; color: var(--text-2); }
+    .loading-sub   { font-size: 12px; color: var(--text-3); }
+
+    /* ── Toasts ──────────────────────────────────────────────────────────── */
+    #toasts {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: #141c30;
+      border: 1px solid var(--glass-border);
+      border-left: 3px solid var(--accent);
+      color: var(--text-1);
+      font-size: 12.5px;
+      box-shadow: 0 6px 28px rgba(0,0,0,0.45);
+      animation: toast-in 280ms cubic-bezier(0.34,1.56,0.64,1) forwards;
+      pointer-events: auto;
+    }
+    .toast.success { border-left-color: var(--s-online); }
+    .toast.error   { border-left-color: var(--s-error);  }
+    .toast.info    { border-left-color: var(--accent);   }
+    .toast.warn    { border-left-color: var(--s-starting); }
+    .toast.out     { animation: toast-out 200ms var(--ease) forwards; }
+
+    @keyframes toast-in  { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes toast-out { from { transform: none; opacity: 1; } to { transform: translateX(60px); opacity: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-title">SSC System Dashboard</div>
+  <div class="loading-sub" id="loading-sub">Connecting to local server…</div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎓</div>
+      <div>
+        <div class="logo-name">SSC Dashboard</div>
+        <div class="logo-sub">Service Management</div>
+      </div>
+    </div>
+
+    <div class="h-spacer"></div>
+
+    <div class="online-pill" id="online-pill">
+      <span class="online-pill-dot"></span>
+      <span id="online-text">— / — online</span>
+    </div>
+
+    <div class="ws-pill" id="ws-pill">
+      <span class="ws-dot"></span>
+      <span id="ws-label">Connecting</span>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btn-start-all" onclick="apiStartAll()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start All
+      </button>
+      <button class="btn btn-danger" id="btn-stop-all" onclick="apiStopAll()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        Stop All
+      </button>
+    </div>
+  </header>
+
+  <!-- Service Cards -->
+  <div class="cards-section">
+    <div class="cards-grid" id="cards-grid"></div>
+  </div>
+
+  <!-- Log Section -->
+  <div class="log-section">
+    <div class="log-tabbar" id="log-tabbar">
+      <!-- tabs injected by JS -->
+      <div class="tab-spacer"></div>
+      <div class="log-toolbar">
+        <button class="btn-toolbar active" id="btn-autoscroll" onclick="toggleAutoScroll()">↓ Auto</button>
+        <button class="btn-toolbar" onclick="clearActiveLog()">Clear</button>
+      </div>
+    </div>
+    <div class="log-terminal" id="log-terminal">
+      <div class="log-empty">Select a service to see its logs.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+const API_BASE = 'http://localhost:9999';
+const WS_URL   = 'ws://localhost:9999';
+const SVC_COLORS = {
+  mysql: '#3b82f6', minio: '#ef4444',
+  fileserver: '#f59e0b', backend: '#8b5cf6', frontend: '#10b981'
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let services    = {};   // id -> service object from server
+let serviceOrder= [];   // ordered array of ids
+let statuses    = {};   // id -> 'online'|'starting'|'stopped'|'error'
+let logs        = {};   // id -> string (raw text)
+let activeLog   = null;
+let autoScroll  = true;
+let ws          = null;
+let prevStatuses= {};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ANSI → HTML
+// ═══════════════════════════════════════════════════════════════════════════════
+const ANSI_CLASSES = {
+  '1': 'ansi-bold',    '2': 'ansi-dim',
+  '31': 'ansi-red',    '32': 'ansi-green',   '33': 'ansi-yellow',
+  '34': 'ansi-blue',   '35': 'ansi-magenta', '36': 'ansi-cyan',   '37': 'ansi-white',
+  '90': 'ansi-dim',
+  '91': 'ansi-bright-red',    '92': 'ansi-bright-green',   '93': 'ansi-bright-yellow',
+  '94': 'ansi-bright-blue',   '95': 'ansi-bright-magenta', '96': 'ansi-bright-cyan',
+  '97': 'ansi-bright-white'
+};
+
+function ansiToHtml(raw) {
+  // Escape HTML
+  let text = raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  let depth = 0;
+
+  text = text.replace(/\x1B\[([0-9;]*)m/g, (_, seq) => {
+    const codes = seq === '' ? ['0'] : seq.split(';');
+    let out = '';
+    for (const code of codes) {
+      if (code === '0' || code === '') {
+        if (depth > 0) { out += '</span>'.repeat(depth); depth = 0; }
+      } else if (ANSI_CLASSES[code]) {
+        out += `<span class="${ANSI_CLASSES[code]}">`;
+        depth++;
+      }
+    }
+    return out;
+  });
+
+  // Close any dangling spans
+  if (depth > 0) text += '</span>'.repeat(depth);
+
+  // Strip remaining escape sequences
+  text = text.replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
+
+  return text;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════════════════════
+function toast(msg, type = 'info', ms = 3500) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').prepend(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 200);
+  }, ms);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CARD & TAB CREATION
+// ═══════════════════════════════════════════════════════════════════════════════
+function svcColor(id) { return SVC_COLORS[id] || '#6366f1'; }
+
+function buildCard(svc) {
+  const id    = svc.id;
+  const color = svcColor(id);
+
+  const card = document.createElement('div');
+  card.className = 'svc-card';
+  card.id = `card-${id}`;
+  card.style.setProperty('--svc-color', color);
+  card.addEventListener('click', e => {
+    if (!e.target.closest('button, a')) switchTab(id);
+  });
+
+  const portStr = svc.consolePort
+    ? `:${svc.port} / :${svc.consolePort}`
+    : `:${svc.port}`;
+
+  const linksHtml = (svc.links || []).map(l =>
+    `<a href="${l.url}" target="_blank" rel="noopener" class="card-link">
+       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+         <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+         <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+       </svg>${l.label}
+     </a>`
+  ).join('');
+
+  card.innerHTML = `
+    <div class="card-header-row">
+      <div class="card-icon-wrap">${svc.icon || '⚙️'}</div>
+      <div class="status-ring" id="ring-${id}">
+        <div class="ring-pulse" style="background:${color}"></div>
+        <div class="ring-core"></div>
+      </div>
+    </div>
+    <div class="card-name">${svc.name}</div>
+    <div class="card-port">${portStr}</div>
+    <div class="status-badge stopped" id="badge-${id}">Stopped</div>
+    ${linksHtml ? `<div class="card-links">${linksHtml}</div>` : ''}
+    <div class="card-actions">
+      <button class="btn-svc btn-svc-start" id="start-${id}" onclick="apiStart('${id}')">▶ Start</button>
+      <button class="btn-svc btn-svc-stop"  id="stop-${id}"  onclick="apiStop('${id}')"  disabled>■ Stop</button>
+      <button class="btn-svc btn-svc-log"   onclick="switchTab('${id}')" title="View logs">≡</button>
+    </div>`;
+
+  return card;
+}
+
+function buildTab(svc) {
+  const id    = svc.id;
+  const color = svcColor(id);
+  const btn   = document.createElement('button');
+  btn.className = 'log-tab';
+  btn.id = `tab-${id}`;
+  btn.innerHTML = `<span class="tab-dot" style="background:${color}"></span>${svc.name}`;
+  btn.addEventListener('click', () => switchTab(id));
+  return btn;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STATUS UPDATE
+// ═══════════════════════════════════════════════════════════════════════════════
+function applyStatuses(newStatuses) {
+  for (const id of serviceOrder) {
+    const s    = newStatuses[id] || 'stopped';
+    const prev = prevStatuses[id];
+
+    // Toast on state changes
+    if (prev && prev !== s) {
+      const name = services[id]?.name || id;
+      if (s === 'online')   toast(`${name} is online`, 'success');
+      if (s === 'stopped' && prev === 'online') toast(`${name} stopped`, 'warn');
+      if (s === 'error')    toast(`${name} error`, 'error');
+    }
+
+    statuses[id] = s;
+
+    // Badge
+    const badge = document.getElementById(`badge-${id}`);
+    if (badge) {
+      badge.className = `status-badge ${s}`;
+      badge.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    // Ring
+    const ring = document.getElementById(`ring-${id}`);
+    if (ring) {
+      ring.className = `status-ring${s === 'online' ? ' is-online' : s === 'starting' ? ' is-starting' : ''}`;
+      const core = ring.querySelector('.ring-core');
+      if (core) core.style.background =
+        s === 'online'   ? 'var(--s-online)'   :
+        s === 'starting' ? 'var(--s-starting)' :
+        s === 'error'    ? 'var(--s-error)'    : 'var(--s-stopped)';
+    }
+
+    // Buttons
+    const startBtn = document.getElementById(`start-${id}`);
+    const stopBtn  = document.getElementById(`stop-${id}`);
+    if (startBtn) startBtn.disabled = (s === 'online' || s === 'starting');
+    if (stopBtn)  stopBtn.disabled  = (s === 'stopped');
+  }
+
+  prevStatuses = { ...newStatuses };
+
+  // Online count
+  const online = Object.values(newStatuses).filter(v => v === 'online').length;
+  const total  = serviceOrder.length;
+  document.getElementById('online-text').textContent = `${online} / ${total} online`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LOG DISPLAY
+// ═══════════════════════════════════════════════════════════════════════════════
+const MAX_LOG_CHARS = 80_000;
+
+function appendToLog(id, data) {
+  logs[id] = (logs[id] || '') + data;
+  // Trim from the front if too large
+  if (logs[id].length > MAX_LOG_CHARS) {
+    logs[id] = logs[id].slice(logs[id].length - MAX_LOG_CHARS);
+  }
+  if (id === activeLog) renderTerminal();
+}
+
+function renderTerminal() {
+  const el = document.getElementById('log-terminal');
+  const text = logs[activeLog] || '';
+  if (!text.trim()) {
+    el.innerHTML = `<div class="log-empty">No logs yet for ${services[activeLog]?.name || activeLog}.</div>`;
+    return;
+  }
+  el.innerHTML = ansiToHtml(text);
+  if (autoScroll) el.scrollTop = el.scrollHeight;
+}
+
+function clearActiveLog() {
+  if (!activeLog) return;
+  logs[activeLog] = '';
+  renderTerminal();
+}
+
+function toggleAutoScroll() {
+  autoScroll = !autoScroll;
+  const btn = document.getElementById('btn-autoscroll');
+  btn.classList.toggle('active', autoScroll);
+  if (autoScroll) {
+    const el = document.getElementById('log-terminal');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════════
+function switchTab(id) {
+  activeLog = id;
+
+  document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.svc-card').forEach(c => c.classList.remove('selected-log'));
+
+  const tab  = document.getElementById(`tab-${id}`);
+  const card = document.getElementById(`card-${id}`);
+  if (tab)  tab.classList.add('active');
+  if (card) card.classList.add('selected-log');
+
+  renderTerminal();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  API CALLS
+// ═══════════════════════════════════════════════════════════════════════════════
+async function apiStart(id) {
+  try {
+    await fetch(`${API_BASE}/api/start/${id}`, { method: 'POST' });
+    switchTab(id);
+  } catch (e) { toast(`Start failed: ${e.message}`, 'error'); }
+}
+
+async function apiStop(id) {
+  try {
+    await fetch(`${API_BASE}/api/stop/${id}`, { method: 'POST' });
+  } catch (e) { toast(`Stop failed: ${e.message}`, 'error'); }
+}
+
+async function apiStartAll() {
+  toast('Starting all services…', 'info');
+  try {
+    await fetch(`${API_BASE}/api/start-all`, { method: 'POST' });
+    if (serviceOrder[0]) switchTab(serviceOrder[0]);
+  } catch (e) { toast(`Error: ${e.message}`, 'error'); }
+}
+
+async function apiStopAll() {
+  toast('Stopping all services…', 'info');
+  try {
+    await fetch(`${API_BASE}/api/stop-all`, { method: 'POST' });
+  } catch (e) { toast(`Error: ${e.message}`, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  WEBSOCKET
+// ═══════════════════════════════════════════════════════════════════════════════
+let wsRetryDelay = 1000;
+
+function connectWs() {
+  ws = new WebSocket(WS_URL);
+  const pill  = document.getElementById('ws-pill');
+  const label = document.getElementById('ws-label');
+
+  ws.onopen = () => {
+    pill.classList.add('live');
+    label.textContent = 'Live';
+    wsRetryDelay = 1000;
+  };
+
+  ws.onmessage = ({ data }) => {
+    try {
+      const msg = JSON.parse(data);
+      if (msg.type === 'log') {
+        appendToLog(msg.service, msg.data);
+      } else if (msg.type === 'status') {
+        applyStatuses(msg.statuses);
+      } else if (msg.type === 'notify') {
+        toast(msg.message, msg.level || 'info');
+      }
+    } catch {}
+  };
+
+  ws.onclose = ws.onerror = () => {
+    pill.classList.remove('live');
+    label.textContent = 'Reconnecting…';
+    setTimeout(connectWs, wsRetryDelay);
+    wsRetryDelay = Math.min(wsRetryDelay * 1.5, 8000);
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+async function init() {
+  const loadSub = document.getElementById('loading-sub');
+  let data;
+
+  // Retry until server responds
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}/api/services`);
+      data = await res.json();
+      break;
+    } catch {
+      loadSub.textContent = `Waiting for dashboard server… (attempt ${attempt + 1})`;
+      await new Promise(r => setTimeout(r, 600));
+    }
+  }
+
+  if (!data) {
+    loadSub.textContent = 'Could not connect. Is dashboard-server.js running on port 9999?';
+    return;
+  }
+
+  services     = data.services;
+  serviceOrder = data.order;
+  statuses     = data.statuses || {};
+
+  serviceOrder.forEach(id => { logs[id] = ''; });
+
+  // Build cards + tabs
+  const grid   = document.getElementById('cards-grid');
+  const tabbar = document.getElementById('log-tabbar');
+  const spacer = tabbar.querySelector('.tab-spacer');
+
+  serviceOrder.forEach(id => {
+    const svc = services[id];
+    if (!svc) return;
+    grid.appendChild(buildCard(svc));
+    tabbar.insertBefore(buildTab(svc), spacer);
+  });
+
+  applyStatuses(statuses);
+  prevStatuses = { ...statuses };
+
+  // Select first tab
+  if (serviceOrder.length) switchTab(serviceOrder[0]);
+
+  // Connect WebSocket
+  connectWs();
+
+  // Fade out loading screen
+  const loadEl = document.getElementById('loading');
+  loadEl.classList.add('fade-out');
+  setTimeout(() => loadEl.remove(), 420);
+
+  toast('Dashboard ready', 'success', 2000);
+}
+
+init();
+</script>
+</body>
+</html>
