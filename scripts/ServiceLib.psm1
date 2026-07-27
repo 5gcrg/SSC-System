@@ -7,14 +7,44 @@ $Script:RepoRoot = Split-Path -Parent $PSScriptRoot
 $Script:RunDir   = Join-Path $RepoRoot '.run'
 $Script:LogDir   = Join-Path $RepoRoot 'logs'
 
+# Root .env is gitignored and today has zero effect on anything (nothing sourced it).
+# Load it into the process environment once, without overriding anything already set
+# in the shell, so BACKEND_PORT/FILESERVER_PORT/etc. can be customized per-machine to
+# dodge port clashes with other local projects, without touching the checked-in
+# defaults that the real Windows Server deployment expects.
+function Import-SscDotEnv {
+    $envFile = Join-Path $RepoRoot '.env'
+    if (-not (Test-Path $envFile)) { return }
+    foreach ($line in Get-Content $envFile) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) { continue }
+        $eq = $trimmed.IndexOf('=')
+        if ($eq -lt 1) { continue }
+        $key = $trimmed.Substring(0, $eq).Trim()
+        $value = $trimmed.Substring($eq + 1).Trim()
+        if ($value.Length -ge 2 -and (
+                ($value.StartsWith('"') -and $value.EndsWith('"')) -or
+                ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        if (-not (Test-Path "Env:$key")) { Set-Item "Env:$key" $value }
+    }
+}
+Import-SscDotEnv
+
+function Get-SscEnvOrDefault([string]$Name, $Default) {
+    $val = [Environment]::GetEnvironmentVariable($Name)
+    if ($val) { $val } else { $Default }
+}
+
 # Startup order matters (each depends on the one before); stop order is the reverse.
 $Script:ServiceOrder = @('minio', 'fileserver', 'backend', 'frontend')
 
 $Script:ServiceDefs = @{
-    'minio'      = @{ Port = 9000 }
-    'fileserver' = @{ Port = 8080 }
-    'backend'    = @{ Port = 8081 }
-    'frontend'   = @{ Port = 3000 }
+    'minio'      = @{ Port = [int](Get-SscEnvOrDefault 'MINIO_PORT' 9000); ConsolePort = [int](Get-SscEnvOrDefault 'MINIO_CONSOLE_PORT' 9001) }
+    'fileserver' = @{ Port = [int](Get-SscEnvOrDefault 'FILESERVER_PORT' 8080) }
+    'backend'    = @{ Port = [int](Get-SscEnvOrDefault 'BACKEND_PORT' 8081) }
+    'frontend'   = @{ Port = [int](Get-SscEnvOrDefault 'FRONTEND_PORT' 3000) }
 }
 
 function Get-SscServiceNames {
@@ -38,9 +68,11 @@ function Get-SscLaunchSpec([string]$Name) {
             # MinIO falls back to minioadmin/minioadmin and every upload is rejected.
             $env:MINIO_ROOT_USER = if ($env:MINIO_ACCESS_KEY) { $env:MINIO_ACCESS_KEY } else { 'sscadmin' }
             $env:MINIO_ROOT_PASSWORD = if ($env:MINIO_SECRET_KEY) { $env:MINIO_SECRET_KEY } else { 'sscpassword123' }
+            $minioPort = $ServiceDefs['minio'].Port
+            $minioConsolePort = $ServiceDefs['minio'].ConsolePort
             return @{
                 FilePath         = Join-Path $RepoRoot '.tools\minio.exe'
-                ArgumentList     = @('server', (Join-Path $RepoRoot '.tools\minio-data'), '--console-address', ':9001')
+                ArgumentList     = @('server', (Join-Path $RepoRoot '.tools\minio-data'), '--address', ":$minioPort", '--console-address', ":$minioConsolePort")
                 WorkingDirectory = $RepoRoot
             }
         }
@@ -61,6 +93,9 @@ function Get-SscLaunchSpec([string]$Name) {
         'frontend' {
             $dir = Join-Path $RepoRoot 'ssc-booking-frontend'
             # npm is a .cmd shim on Windows; cmd.exe /c is the reliable way to launch it hidden.
+            # Next reads process.env.PORT directly (before .env.local is ever parsed), so the
+            # port must be a real process env var here, not a PORT= line in .env.local.
+            $env:PORT = "$($ServiceDefs['frontend'].Port)"
             return @{ FilePath = 'cmd.exe'; ArgumentList = @('/c', 'npm start'); WorkingDirectory = $dir }
         }
         default { throw "Unknown service '$Name'." }
