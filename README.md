@@ -19,10 +19,13 @@ Plus two infrastructure services: **MySQL 8.0** (3306) and **MinIO** (9000 API /
 ## Quick Start (Windows)
 
 ```powershell
-# 1. Clone with submodules
-git clone --recursive https://github.com/5gcrg/SSC-System.git
+# 1. Clone the `prod` branch with submodules. `prod` is the branch reserved for real
+#    deployment (school server or local staging); `test/railway-deployment` is Railway's
+#    test-only branch and shouldn't be used for a real install.
+git clone --recursive -b prod https://github.com/5gcrg/SSC-System.git
 cd SSC-System
-# already cloned without --recursive?  git submodule update --init
+# already cloned without --recursive?  git submodule update --init --recursive
+# cloned without -b prod?  git checkout prod && git submodule update --init --recursive
 
 # 2. One-time setup (installs prerequisites via Chocolatey, creates the DB, downloads
 #    MinIO, builds all three apps). Run PowerShell as Administrator:
@@ -86,6 +89,31 @@ Also set `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_FILESERVER_URL` in
 `NEXT_PUBLIC_*` values are baked in at build time. `scripts\ServiceLib.psm1` loads the root
 `.env` into the process environment before computing each service's port and passes it through
 to `start-all.ps1` / `stop-all.ps1` / `monitor.ps1` automatically; nothing else needs editing.
+
+## Production deployment (Windows Server)
+
+Quick Start above runs the services as plain background processes — fine for a demo, but they
+won't survive a reboot or restart automatically after a crash. For a real Windows Server, register
+the four app services with [NSSM](https://nssm.cc/) instead:
+
+```powershell
+# Elevated PowerShell, after completing Quick Start above (so the jars/build already exist)
+powershell -ExecutionPolicy Bypass -File scripts\install-services.ps1
+
+# To remove them again:
+powershell -ExecutionPolicy Bypass -File scripts\uninstall-services.ps1
+```
+
+This registers `SSC-MinIO`, `SSC-FileServer`, `SSC-Backend`, `SSC-Frontend` as Windows Services
+with the correct startup order/dependencies (MySQL → MinIO → File Server → Backend → Frontend) and
+auto-start on boot. Logs go to `logs\ssc-<name>.log` / `logs\ssc-<name>.err.log`.
+
+Before installing, work through **[deployment_windows.md](deployment_windows.md)** — it's a
+checklist of every environment-variable change a real server needs that Quick Start's `localhost`
+defaults don't cover (the server's LAN IP instead of `localhost`, MinIO credentials, JWT secret,
+CORS origins, cookie settings, firewall rules). See also **[SETUP.md](SETUP.md)** and
+**[INSTRUCTIONS.md](INSTRUCTIONS.md)** for the fuller IT-admin walkthrough covering the same
+ground in more detail.
 
 ## Test it's running
 

@@ -46,11 +46,13 @@ winget install --id Oracle.MySQL -e
 
 ## 3. One-Time System Setup
 
-1. **Clone Repository with Submodules:**
+1. **Clone Repository with Submodules (`prod` branch):**
    ```powershell
-   git clone --recursive https://github.com/5gcrg/SSC-System.git
+   git clone --recursive -b prod https://github.com/5gcrg/SSC-System.git
    cd SSC-System
    ```
+   `prod` is the branch reserved for real deployment; `test/railway-deployment` is Railway's
+   test-only branch and should not be used for a production install.
 
 2. **Run the Automated Setup Script:**
    The [setup.ps1](file:///c:/Users/admir/Desktop/SSC-System/scripts/setup.ps1) script handles prerequisite validation, database/user creation, MinIO binary downloading, Maven building, and Next.js frontend compiling:

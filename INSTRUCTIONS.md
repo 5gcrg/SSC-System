@@ -158,12 +158,15 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -MySqlRootPassword ""
 
 ```powershell
 cd C:\
-git clone --recursive https://github.com/5gcrg/SSC-System.git
+git clone --recursive -b prod https://github.com/5gcrg/SSC-System.git
 cd SSC-System
 
 # if you cloned without --recursive:
-git submodule update --init
+git submodule update --init --recursive
 ```
+
+`prod` is the branch reserved for real deployment; `test/railway-deployment` is Railway's
+test-only branch and should not be used for a production install.
 
 The three app folders (`ssc-booking-frontend/`, `ssc-booking-backend/`,
 `ssc-booking-fileserver/`) are git submodules and must not be empty.
