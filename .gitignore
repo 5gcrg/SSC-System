@@ -1,11 +1,22 @@
-.env
+# ── Environment files (tracked on LocalProd for initial team setup) ──────────
+# NOTE: .env files are intentionally tracked on this branch for school deployment.
+# Remove these exceptions after distributing to the team and re-add .env rules.
+# .env          <-- temporarily removed to allow tracking
+
+# ── Markdown documentation (excluded from LocalProd deployment) ───────────────
+# All .md files are ignored EXCEPT README.md (the setup guide).
+*.md
+!README.md
+!**/README.md
+
+# ── Build outputs & runtime ───────────────────────────────────────────────────
 */target/
 */node_modules/
 */.next/
 */dist/
 *.log
 
-# Bare-metal local installs and runtime files (created by scripts/SETUP.ps1 or manual setup)
+# ── Bare-metal local installs and runtime files (created by scripts/SETUP.ps1 or manual setup)
 minio/
 mysql/
 nssm/

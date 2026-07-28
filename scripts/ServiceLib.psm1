@@ -7,14 +7,61 @@ $Script:RepoRoot = Split-Path -Parent $PSScriptRoot
 $Script:RunDir   = Join-Path $RepoRoot '.run'
 $Script:LogDir   = Join-Path $RepoRoot 'logs'
 
+# --- Root .env is the single source of truth for ports and service config ----------
+# Values are pushed into the current process environment so every service we launch
+# inherits them: Start-Process hands the parent environment to the child, and both
+# Spring Boot and MinIO read their config straight out of it.
+#
+# .env deliberately wins over a variable already set in the shell - re-importing the
+# module after editing .env then always takes effect, instead of silently keeping a
+# stale value from an earlier import in the same session.
+function Import-SscDotEnv([string]$Path = (Join-Path $Script:RepoRoot '.env')) {
+    if (-not (Test-Path $Path)) { return }
+    foreach ($line in Get-Content $Path) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) { continue }
+        $split = $trimmed.IndexOf('=')
+        if ($split -lt 1) { continue }
+        $key = $trimmed.Substring(0, $split).Trim()
+        $value = $trimmed.Substring($split + 1).Trim()
+        # Strip one layer of matching surrounding quotes, if present.
+        if ($value.Length -ge 2 -and (($value[0] -eq '"' -and $value[-1] -eq '"') -or
+                                      ($value[0] -eq "'" -and $value[-1] -eq "'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        [Environment]::SetEnvironmentVariable($key, $value, 'Process')
+    }
+}
+
+Import-SscDotEnv
+
+# Ports fall back to the same values .env ships with, so a missing .env still lands
+# every service on the ports the rest of the repo documents.
+function Get-SscEnvPort([string]$Name, [int]$Default) {
+    $raw = [Environment]::GetEnvironmentVariable($Name, 'Process')
+    $parsed = 0
+    if ($raw -and [int]::TryParse($raw, [ref]$parsed) -and $parsed -gt 0) { return $parsed }
+    return $Default
+}
+
+# First non-empty of $Names, else $Default. Written as a function because a chained
+# `if {} / elseif {}` split across lines is a parse error in an assignment context.
+function Get-SscEnvOrDefault([string[]]$Names, [string]$Default) {
+    foreach ($n in $Names) {
+        $v = [Environment]::GetEnvironmentVariable($n, 'Process')
+        if ($v) { return $v }
+    }
+    return $Default
+}
+
 # Startup order matters (each depends on the one before); stop order is the reverse.
 $Script:ServiceOrder = @('minio', 'fileserver', 'backend', 'frontend')
 
 $Script:ServiceDefs = @{
-    'minio'      = @{ Port = 9000 }
-    'fileserver' = @{ Port = 8080 }
-    'backend'    = @{ Port = 8081 }
-    'frontend'   = @{ Port = 3000 }
+    'minio'      = @{ Port = (Get-SscEnvPort 'MINIO_PORT'      9006) }
+    'fileserver' = @{ Port = (Get-SscEnvPort 'FILESERVER_PORT' 9005) }
+    'backend'    = @{ Port = (Get-SscEnvPort 'BACKEND_PORT'    9004) }
+    'frontend'   = @{ Port = (Get-SscEnvPort 'FRONTEND_PORT'   9003) }
 }
 
 function Get-SscServiceNames {
@@ -36,11 +83,16 @@ function Get-SscLaunchSpec([string]$Name) {
             # Root credentials must match the fileserver's minio.access-key/secret-key
             # (ssc-booking-fileserver\src\main\resources\application.yml); without them
             # MinIO falls back to minioadmin/minioadmin and every upload is rejected.
-            $env:MINIO_ROOT_USER = if ($env:MINIO_ACCESS_KEY) { $env:MINIO_ACCESS_KEY } else { 'sscadmin' }
-            $env:MINIO_ROOT_PASSWORD = if ($env:MINIO_SECRET_KEY) { $env:MINIO_SECRET_KEY } else { 'sscpassword123' }
+            $env:MINIO_ROOT_USER = Get-SscEnvOrDefault @('MINIO_ACCESS_KEY', 'MINIO_ROOT_USER') 'sscadmin'
+            $env:MINIO_ROOT_PASSWORD = Get-SscEnvOrDefault @('MINIO_SECRET_KEY', 'MINIO_ROOT_PASSWORD') 'sscpassword123'
+            # --address is required: without it MinIO binds its API to 9000 no matter
+            # what MINIO_PORT says, and every port check here would look at the wrong one.
+            $consolePort = Get-SscEnvPort 'MINIO_CONSOLE_PORT' 9007
             return @{
                 FilePath         = Join-Path $RepoRoot '.tools\minio.exe'
-                ArgumentList     = @('server', (Join-Path $RepoRoot '.tools\minio-data'), '--console-address', ':9001')
+                ArgumentList     = @('server', (Join-Path $RepoRoot '.tools\minio-data'),
+                                     '--address', ":$(Get-SscServicePort 'minio')",
+                                     '--console-address', ":$consolePort")
                 WorkingDirectory = $RepoRoot
             }
         }
@@ -49,19 +101,35 @@ function Get-SscLaunchSpec([string]$Name) {
             $jar = Get-ChildItem (Join-Path $dir 'target\*.jar') -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
             if (-not $jar) { throw "No jar in ssc-booking-fileserver\target - build it first (scripts\SETUP.ps1)." }
-            return @{ FilePath = 'java'; ArgumentList = @('-jar', $jar.FullName); WorkingDirectory = $dir }
+            # --server.port is passed explicitly so the process can never end up on a port
+            # other than the one Get-SscServiceStatus and monitor.ps1 health-check.
+            return @{
+                FilePath         = 'java'
+                ArgumentList     = @('-jar', $jar.FullName, "--server.port=$(Get-SscServicePort 'fileserver')")
+                WorkingDirectory = $dir
+            }
         }
         'backend' {
             $dir = Join-Path $RepoRoot 'ssc-booking-backend'
             $jar = Get-ChildItem (Join-Path $dir 'target\*.jar') -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
             if (-not $jar) { throw "No jar in ssc-booking-backend\target - build it first (scripts\SETUP.ps1)." }
-            return @{ FilePath = 'java'; ArgumentList = @('-jar', $jar.FullName); WorkingDirectory = $dir }
+            return @{
+                FilePath         = 'java'
+                ArgumentList     = @('-jar', $jar.FullName, "--server.port=$(Get-SscServicePort 'backend')")
+                WorkingDirectory = $dir
+            }
         }
         'frontend' {
             $dir = Join-Path $RepoRoot 'ssc-booking-frontend'
             # npm is a .cmd shim on Windows; cmd.exe /c is the reliable way to launch it hidden.
-            return @{ FilePath = 'cmd.exe'; ArgumentList = @('/c', 'npm start'); WorkingDirectory = $dir }
+            # -p is what actually decides the port - `next start` reads the flag before any
+            # .env file, so this beats relying on PORT being picked up.
+            return @{
+                FilePath         = 'cmd.exe'
+                ArgumentList     = @('/c', "npm start -- -p $(Get-SscServicePort 'frontend')")
+                WorkingDirectory = $dir
+            }
         }
         default { throw "Unknown service '$Name'." }
     }

@@ -179,8 +179,9 @@ Pop-Location
 
 Write-Host "`n=== Setup complete ===" -ForegroundColor Green
 Write-Host "Start each service in its own terminal:"
-Write-Host "  .tools\minio.exe server .tools\minio-data --console-address :9001   (set MINIO_ROOT_USER=sscadmin, MINIO_ROOT_PASSWORD=sscpassword123)"
-Write-Host "  cd ssc-booking-fileserver; java -jar target\*.jar"
-Write-Host "  cd ssc-booking-backend;    java -jar target\*.jar"
-Write-Host "  cd ssc-booking-frontend;   npm start"
-Write-Host "Then open: http://localhost:3000/login"
+Write-Host "  .tools\minio.exe server .tools\minio-data --address :9006 --console-address :9007   (set MINIO_ROOT_USER=sscadmin, MINIO_ROOT_PASSWORD=sscpassword123)"
+Write-Host "  cd ssc-booking-fileserver; java -jar target\*.jar --server.port=9005"
+Write-Host "  cd ssc-booking-backend;    java -jar target\*.jar --server.port=9004"
+Write-Host "  cd ssc-booking-frontend;   npm start -- -p 9003"
+Write-Host "Then open: http://localhost:9003/login"
+Write-Host "(Or just run scripts\start-all.ps1, which reads all of these ports from .env.)"
