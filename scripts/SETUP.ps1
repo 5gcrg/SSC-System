@@ -35,7 +35,7 @@ Write-Host "`n[1/6] Checking prerequisites..." -ForegroundColor Cyan
 # Command name -> Chocolatey package id, only used for whichever ones are missing.
 $tools = [ordered]@{
     'git'   = 'git'
-    'java'  = 'temurin21'
+    'java'  = 'temurin'
     'mvn'   = 'maven'
     'node'  = 'nodejs-lts'
     'mysql' = 'mysql'
