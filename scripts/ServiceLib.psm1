@@ -55,9 +55,11 @@ function Get-SscEnvOrDefault([string[]]$Names, [string]$Default) {
 }
 
 # Startup order matters (each depends on the one before); stop order is the reverse.
-$Script:ServiceOrder = @('minio', 'fileserver', 'backend', 'frontend')
+$Script:ServiceOrder = @('mysql', 'minio', 'fileserver', 'backend', 'frontend')
+$Script:ManagedServiceOrder = @('minio', 'fileserver', 'backend', 'frontend')
 
 $Script:ServiceDefs = @{
+    'mysql'      = @{ Port = (Get-SscEnvPort 'MYSQL_PORT'      3306) }
     'minio'      = @{ Port = (Get-SscEnvPort 'MINIO_PORT'      9006) }
     'fileserver' = @{ Port = (Get-SscEnvPort 'FILESERVER_PORT' 9005) }
     'backend'    = @{ Port = (Get-SscEnvPort 'BACKEND_PORT'    9004) }
@@ -78,6 +80,9 @@ function Get-SscLaunchSpec([string]$Name) {
     New-Item -ItemType Directory -Force $LogDir | Out-Null
 
     switch ($Name) {
+        'mysql' {
+            throw "MySQL is managed externally (e.g. via XAMPP Control Panel)."
+        }
         'minio' {
             New-Item -ItemType Directory -Force (Join-Path $RepoRoot '.tools\minio-data') | Out-Null
             # Root credentials must match the fileserver's minio.access-key/secret-key
@@ -181,6 +186,14 @@ function Get-SscPortOwnerPid([int]$Port) {
 }
 
 function Get-SscServiceStatus([string]$Name) {
+    if ($Name -eq 'mysql') {
+        $port = Get-SscServicePort 'mysql'
+        $pid = Get-SscPortOwnerPid $port
+        if (Test-SscPort $port) {
+            return [PSCustomObject]@{ Name = 'mysql'; Status = 'RUNNING'; ProcessId = $pid; Port = $port }
+        }
+        return [PSCustomObject]@{ Name = 'mysql'; Status = 'STOPPED'; ProcessId = $null; Port = $port }
+    }
     $state = Get-SscServiceState $Name
     $port = Get-SscServicePort $Name
     if (-not $state) {
@@ -201,6 +214,15 @@ function Get-SscServiceStatus([string]$Name) {
 
 # --- Start / stop / restart ---------------------------------------------------------
 function Start-SscService([string]$Name) {
+    if ($Name -eq 'mysql') {
+        $port = Get-SscServicePort 'mysql'
+        if (Test-SscPort $port) {
+            Write-Host ("  mysql: already running on port {0} (XAMPP / local service)." -f $port) -ForegroundColor Green
+        } else {
+            Write-Host ("  mysql: NOT running on port {0}. Please start MySQL in XAMPP Control Panel!" -f $port) -ForegroundColor Red
+        }
+        return
+    }
     $existing = Get-SscServiceStatus $Name
     if ($existing.Status -eq 'EXTERNAL') {
         Write-Host ("  {0}: port {1} is already in use by PID {2}, which this tool didn't start - leaving it alone. Stop it manually first if you want this tool to manage it." -f $Name, $existing.Port, $existing.ProcessId) -ForegroundColor Yellow
@@ -221,6 +243,10 @@ function Start-SscService([string]$Name) {
 }
 
 function Stop-SscService([string]$Name) {
+    if ($Name -eq 'mysql') {
+        Write-Host "  mysql: managed externally (e.g. XAMPP). Stop it from XAMPP Control Panel if needed." -ForegroundColor Yellow
+        return
+    }
     $state = Get-SscServiceState $Name
     if ($state -and (Get-Process -Id $state.pid -ErrorAction SilentlyContinue)) {
         # taskkill /T kills the whole process tree - needed because frontend/minio/java
@@ -240,21 +266,32 @@ function Stop-SscService([string]$Name) {
 }
 
 function Restart-SscService([string]$Name) {
+    if ($Name -eq 'mysql') {
+        Write-Host "  mysql: managed externally. Please restart it via XAMPP Control Panel." -ForegroundColor Yellow
+        return
+    }
     Stop-SscService $Name
     Start-Sleep -Milliseconds 500
     Start-SscService $Name
 }
 
 function Start-AllSscServices {
-    foreach ($name in $ServiceOrder) {
+    $mysqlPort = Get-SscServicePort 'mysql'
+    if (-not (Test-SscPort $mysqlPort)) {
+        Write-Host "  [WARNING] MySQL is NOT running on port $mysqlPort!" -ForegroundColor Red
+        Write-Host "  Please start MySQL in XAMPP Control Panel for backend database connectivity.`n" -ForegroundColor Yellow
+    } else {
+        Write-Host "  OK      MySQL service detected on port $mysqlPort (XAMPP / local)." -ForegroundColor Green
+    }
+    foreach ($name in $Script:ManagedServiceOrder) {
         Start-SscService $name
         Start-Sleep -Seconds 2
     }
 }
 
 function Stop-AllSscServices {
-    for ($i = $ServiceOrder.Count - 1; $i -ge 0; $i--) {
-        Stop-SscService $ServiceOrder[$i]
+    for ($i = $Script:ManagedServiceOrder.Count - 1; $i -ge 0; $i--) {
+        Stop-SscService $Script:ManagedServiceOrder[$i]
     }
 }
 

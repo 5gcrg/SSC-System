@@ -29,6 +29,10 @@ function Show-Dashboard {
     Get-SscServiceNames | ForEach-Object { Get-SscServiceStatus $_ } |
         Format-Table -Property Name, Status, ProcessId, Port -AutoSize | Out-Host
 
+    if (-not (Test-SscPort (Get-SscServicePort 'mysql'))) {
+        Write-Host "[WARNING] MySQL is STOPPED on port 3306! Please start MySQL in XAMPP Control Panel." -ForegroundColor Yellow
+    }
+
     Write-Host "[1] Restart ALL   [2] Restart one   [3] Stop ALL   [4] Refresh now   [Q] Quit monitor (services keep running)"
 }
 
