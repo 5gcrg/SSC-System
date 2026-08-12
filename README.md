@@ -136,23 +136,14 @@ cd SSC-System
 git checkout LocalProd
 ```
 
-### Step 2: Set Up MySQL Database
+### Step 2: Start MySQL (XAMPP or Windows Service)
 
-1. Start MySQL 8.
-2. Create the database and user:
-
-```sql
-CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'sscuser'@'localhost' IDENTIFIED BY 'sscpassword';
-GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-> The Spring Boot backend will **automatically run database migrations** (Flyway) on first startup — no manual SQL script execution required.
+1. Start MySQL from the **XAMPP Control Panel** (or start your local MySQL service on port 3306).
+2. The setup script will automatically detect the running MySQL service and provision the `ssc_booking` database and `sscuser` account.
 
 ### Step 3: Run Automated Setup
 
-This script verifies all prerequisites and downloads MinIO automatically:
+This script verifies prerequisites, checks that MySQL is actively running on port 3306, provisions the database, downloads MinIO automatically (handling 302 redirects), and builds all application services:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1

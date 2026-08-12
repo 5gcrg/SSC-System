@@ -29,16 +29,57 @@ if (-not $isAdmin) {
     exit 1
 }
 
-# --- 1. Check prerequisites (any install method - not just Chocolatey) ------------
+# --- 1. Check prerequisites & MySQL status ----------------------------------------
 Write-Host "`n[1/6] Checking prerequisites..." -ForegroundColor Cyan
 
-# Command name -> Chocolatey package id, only used for whichever ones are missing.
+# Probe for mysql.exe in PATH or common XAMPP / MySQL paths and prepend to PATH if found.
+if (-not (Get-Command mysql -ErrorAction SilentlyContinue)) {
+    $knownMySqlPaths = @(
+        'C:\xampp\mysql\bin\mysql.exe',
+        'D:\xampp\mysql\bin\mysql.exe',
+        'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe',
+        'C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe',
+        'C:\Program Files (x86)\MySQL\MySQL Server 8.0\bin\mysql.exe'
+    )
+    if ($env:XAMPP_HOME) {
+        $knownMySqlPaths += (Join-Path $env:XAMPP_HOME 'mysql\bin\mysql.exe')
+    }
+    foreach ($path in $knownMySqlPaths) {
+        if (Test-Path $path) {
+            $binDir = Split-Path -Parent $path
+            $env:PATH = "$binDir;$env:PATH"
+            Write-Host ("  Found MySQL CLI at {0} (added to PATH)" -f $path) -ForegroundColor Green
+            break
+        }
+    }
+}
+
+# Verify MySQL is actively running on port 3306 (HARD STOP if not running)
+function Test-SscMySqlPort([int]$Port = 3306, [int]$TimeoutMs = 1000) {
+    try {
+        $client = [Net.Sockets.TcpClient]::new()
+        $iar = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
+        $ok = $iar.AsyncWaitHandle.WaitOne($TimeoutMs, $false) -and $client.Connected
+        $client.Close()
+        return [bool]$ok
+    } catch { return $false }
+}
+
+if (-not (Test-SscMySqlPort)) {
+    Write-Host "`n[ERROR] MySQL is NOT running on port 3306!" -ForegroundColor Red
+    Write-Host "Please start MySQL in the XAMPP Control Panel (or start your MySQL service) before running setup." -ForegroundColor Yellow
+    Write-Host "Setup aborted." -ForegroundColor Red
+    exit 1
+} else {
+    Write-Host "  OK      MySQL service detected on port 3306 (using existing / XAMPP MySQL)" -ForegroundColor Green
+}
+
+# Dev tools managed by Chocolatey if missing (MySQL is excluded because existing MySQL/XAMPP is used).
 $tools = [ordered]@{
     'git'   = 'git'
     'java'  = 'temurin'
     'mvn'   = 'maven'
     'node'  = 'nodejs-lts'
-    'mysql' = 'mysql'
 }
 
 $missing = @()
@@ -52,7 +93,7 @@ foreach ($cmd in $tools.Keys) {
 }
 
 if ($missing.Count -eq 0) {
-    Write-Host "  All prerequisites already installed - nothing to download." -ForegroundColor Green
+    Write-Host "  All dev prerequisites already installed - nothing to download." -ForegroundColor Green
 } else {
     $packages = $missing | ForEach-Object { $tools[$_] }
     Write-Host ("`n  Missing: {0} -> will install via Chocolatey: {1}" -f ($missing -join ', '), ($packages -join ', ')) -ForegroundColor Yellow
@@ -112,7 +153,7 @@ if (-not (Test-Path (Join-Path $repo 'ssc-booking-backend\pom.xml'))) {
 # --- 3. MySQL database + user -----------------------------------------------------
 Write-Host "`n[3/6] Creating MySQL database 'ssc_booking' and user 'sscuser'..." -ForegroundColor Cyan
 if ($null -eq $MySqlRootPassword) {
-    $rootPwd = Read-Host "Enter your MySQL root password (blank if none)" -AsSecureString
+    $rootPwd = Read-Host "Enter your MySQL root password (blank if none, as in standard XAMPP)" -AsSecureString
     $MySqlRootPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
         [Runtime.InteropServices.Marshal]::SecureStringToBSTR($rootPwd))
 }
@@ -146,7 +187,21 @@ if (Test-Path $minioExe) {
 } else {
     Write-Host "  Downloading minio.exe (~110 MB)..."
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
-    Invoke-WebRequest -Uri 'https://dl.min.io/server/minio/release/windows-amd64/minio.exe' -OutFile $minioExe
+    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+        & curl.exe -L -s -S -o $minioExe 'https://dl.min.io/server/minio/release/windows-amd64/minio.exe'
+    } else {
+        $handler = [System.Net.Http.HttpClientHandler]::new()
+        $handler.AllowAutoRedirect = $true
+        $client = [System.Net.Http.HttpClient]::new($handler)
+        $bytes = $client.GetByteArrayAsync('https://dl.min.io/server/minio/release/windows-amd64/minio.exe').GetAwaiter().GetResult()
+        [System.IO.File]::WriteAllBytes($minioExe, $bytes)
+        $client.Dispose()
+        $handler.Dispose()
+    }
+    if ((-not (Test-Path $minioExe)) -or ((Get-Item $minioExe).Length -lt 1000000)) {
+        Write-Host "MinIO binary download failed or output file is corrupt." -ForegroundColor Red
+        exit 1
+    }
     Write-Host "  Downloaded."
 }
 
