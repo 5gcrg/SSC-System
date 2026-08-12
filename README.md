@@ -141,6 +141,11 @@ git checkout LocalProd
 1. Start MySQL from the **XAMPP Control Panel** (or start your local MySQL service on port 3306).
 2. The setup script will automatically detect the running MySQL service and provision the `ssc_booking` database and `sscuser` account.
 
+> **Resetting / Re-creating the Database (if Flyway migration fails):**
+> ```powershell
+> mysql -u root -e "DROP DATABASE IF EXISTS ssc_booking; CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+> ```
+
 ### Step 3: Run Automated Setup
 
 This script verifies prerequisites, checks that MySQL is actively running on port 3306, provisions the database, downloads MinIO automatically (handling 302 redirects), and builds all application services:
@@ -296,10 +301,15 @@ logs/
    ```
 3. Run `scripts\stop-all.ps1` and restart.
 
-### Database Connection Refused
+### Database Connection / Flyway Migration Error
 
-- Verify MySQL is running: `Get-Service -Name MySQL*`
+- Verify MySQL is running: check XAMPP Control Panel or `Test-NetConnection -ComputerName 127.0.0.1 -Port 3306`.
 - Confirm `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE` in `.env` match your MySQL setup.
+- If Flyway fails with a migration/checksum error, reset the local database:
+  ```powershell
+  mysql -u root -e "DROP DATABASE IF EXISTS ssc_booking; CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+  ```
+  Then re-run `scripts\SETUP.ps1`.
 
 ### Google OAuth Error (`redirect_uri_mismatch`)
 
