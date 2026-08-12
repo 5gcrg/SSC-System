@@ -4,8 +4,8 @@
 # lives in exactly one place.
 
 $Script:RepoRoot = Split-Path -Parent $PSScriptRoot
-$Script:RunDir   = Join-Path $RepoRoot '.run'
-$Script:LogDir   = Join-Path $RepoRoot 'logs'
+$Script:RunDir   = Join-Path $Script:RepoRoot '.run'
+$Script:LogDir   = Join-Path $Script:RepoRoot 'logs'
 
 # --- Root .env is the single source of truth for ports and service config ----------
 # Values are pushed into the current process environment so every service we launch
@@ -67,24 +67,31 @@ $Script:ServiceDefs = @{
 }
 
 function Get-SscServiceNames {
-    $ServiceOrder
+    return @('mysql', 'minio', 'fileserver', 'backend', 'frontend')
 }
 
 function Get-SscServicePort([string]$Name) {
-    $ServiceDefs[$Name].Port
+    switch ("$Name".Trim().ToLower()) {
+        'mysql'      { return Get-SscEnvPort 'MYSQL_PORT'      3306 }
+        'minio'      { return Get-SscEnvPort 'MINIO_PORT'      9006 }
+        'fileserver' { return Get-SscEnvPort 'FILESERVER_PORT' 9005 }
+        'backend'    { return Get-SscEnvPort 'BACKEND_PORT'    9004 }
+        'frontend'   { return Get-SscEnvPort 'FRONTEND_PORT'   9003 }
+        default      { return 0 }
+    }
 }
 
 # --- Launch spec per service: what to run, with what args, from where -------------
 function Get-SscLaunchSpec([string]$Name) {
-    New-Item -ItemType Directory -Force $RunDir | Out-Null
-    New-Item -ItemType Directory -Force $LogDir | Out-Null
+    New-Item -ItemType Directory -Force $Script:RunDir | Out-Null
+    New-Item -ItemType Directory -Force $Script:LogDir | Out-Null
 
     switch ($Name) {
         'mysql' {
             throw "MySQL is managed externally (e.g. via XAMPP Control Panel)."
         }
         'minio' {
-            New-Item -ItemType Directory -Force (Join-Path $RepoRoot '.tools\minio-data') | Out-Null
+            New-Item -ItemType Directory -Force (Join-Path $Script:RepoRoot '.tools\minio-data') | Out-Null
             # Root credentials must match the fileserver's minio.access-key/secret-key
             # (ssc-booking-fileserver\src\main\resources\application.yml); without them
             # MinIO falls back to minioadmin/minioadmin and every upload is rejected.
@@ -94,15 +101,15 @@ function Get-SscLaunchSpec([string]$Name) {
             # what MINIO_PORT says, and every port check here would look at the wrong one.
             $consolePort = Get-SscEnvPort 'MINIO_CONSOLE_PORT' 9007
             return @{
-                FilePath         = Join-Path $RepoRoot '.tools\minio.exe'
-                ArgumentList     = @('server', (Join-Path $RepoRoot '.tools\minio-data'),
+                FilePath         = Join-Path $Script:RepoRoot '.tools\minio.exe'
+                ArgumentList     = @('server', (Join-Path $Script:RepoRoot '.tools\minio-data'),
                                      '--address', ":$(Get-SscServicePort 'minio')",
                                      '--console-address', ":$consolePort")
-                WorkingDirectory = $RepoRoot
+                WorkingDirectory = $Script:RepoRoot
             }
         }
         'fileserver' {
-            $dir = Join-Path $RepoRoot 'ssc-booking-fileserver'
+            $dir = Join-Path $Script:RepoRoot 'ssc-booking-fileserver'
             $jar = Get-ChildItem (Join-Path $dir 'target\*.jar') -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
             if (-not $jar) { throw "No jar in ssc-booking-fileserver\target - build it first (scripts\SETUP.ps1)." }
@@ -115,7 +122,7 @@ function Get-SscLaunchSpec([string]$Name) {
             }
         }
         'backend' {
-            $dir = Join-Path $RepoRoot 'ssc-booking-backend'
+            $dir = Join-Path $Script:RepoRoot 'ssc-booking-backend'
             $jar = Get-ChildItem (Join-Path $dir 'target\*.jar') -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
             if (-not $jar) { throw "No jar in ssc-booking-backend\target - build it first (scripts\SETUP.ps1)." }
@@ -126,7 +133,7 @@ function Get-SscLaunchSpec([string]$Name) {
             }
         }
         'frontend' {
-            $dir = Join-Path $RepoRoot 'ssc-booking-frontend'
+            $dir = Join-Path $Script:RepoRoot 'ssc-booking-frontend'
             # npm is a .cmd shim on Windows; cmd.exe /c is the reliable way to launch it hidden.
             # -p is what actually decides the port - `next start` reads the flag before any
             # .env file, so this beats relying on PORT being picked up.
@@ -141,7 +148,7 @@ function Get-SscLaunchSpec([string]$Name) {
 }
 
 # --- State persistence (one JSON file per service under .run\) --------------------
-function Get-SscStatePath([string]$Name) { Join-Path $RunDir "$Name.json" }
+function Get-SscStatePath([string]$Name) { Join-Path $Script:RunDir "$Name.json" }
 
 function Get-SscServiceState([string]$Name) {
     $path = Get-SscStatePath $Name
@@ -150,7 +157,7 @@ function Get-SscServiceState([string]$Name) {
 }
 
 function Save-SscServiceState([string]$Name, [int]$ProcessId) {
-    New-Item -ItemType Directory -Force $RunDir | Out-Null
+    New-Item -ItemType Directory -Force $Script:RunDir | Out-Null
     [PSCustomObject]@{
         pid       = $ProcessId
         startedAt = (Get-Date).ToString('o')

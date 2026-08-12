@@ -20,20 +20,16 @@ $repo = Split-Path -Parent $PSScriptRoot
 Write-Host "=== SSC System setup ===" -ForegroundColor Cyan
 Write-Host "Repo root: $repo"
 
-# --- 0. Require an elevated session -------------------------------------------
+# --- 0. Require elevated session only if Chocolatey installs are needed -----------
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Host "This script installs software via Chocolatey and must be run as Administrator." -ForegroundColor Red
-    Write-Host "Right-click PowerShell -> 'Run as administrator', then re-run this script."
-    exit 1
-}
 
 # --- 1. Check prerequisites & MySQL status ----------------------------------------
 Write-Host "`n[1/6] Checking prerequisites..." -ForegroundColor Cyan
 
-# Probe for mysql.exe in PATH or common XAMPP / MySQL paths and prepend to PATH if found.
-if (-not (Get-Command mysql -ErrorAction SilentlyContinue)) {
+# Probe for mysql.exe in PATH or common XAMPP / MySQL paths and save path.
+$mysqlBin = Get-Command mysql -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+if (-not $mysqlBin) {
     $knownMySqlPaths = @(
         'C:\xampp\mysql\bin\mysql.exe',
         'D:\xampp\mysql\bin\mysql.exe',
@@ -46,6 +42,7 @@ if (-not (Get-Command mysql -ErrorAction SilentlyContinue)) {
     }
     foreach ($path in $knownMySqlPaths) {
         if (Test-Path $path) {
+            $mysqlBin = $path
             $binDir = Split-Path -Parent $path
             $env:PATH = "$binDir;$env:PATH"
             Write-Host ("  Found MySQL CLI at {0} (added to PATH)" -f $path) -ForegroundColor Green
@@ -95,6 +92,12 @@ foreach ($cmd in $tools.Keys) {
 if ($missing.Count -eq 0) {
     Write-Host "  All dev prerequisites already installed - nothing to download." -ForegroundColor Green
 } else {
+    if (-not $isAdmin) {
+        Write-Host "`n[ERROR] Missing prerequisites ($($missing -join ', ')) need to be installed via Chocolatey." -ForegroundColor Red
+        Write-Host "Please re-run this script in an elevated (Administrator) PowerShell session." -ForegroundColor Yellow
+        exit 1
+    }
+
     $packages = $missing | ForEach-Object { $tools[$_] }
     Write-Host ("`n  Missing: {0} -> will install via Chocolatey: {1}" -f ($missing -join ', '), ($packages -join ', ')) -ForegroundColor Yellow
 
@@ -153,29 +156,36 @@ if (-not (Test-Path (Join-Path $repo 'ssc-booking-backend\pom.xml'))) {
 # --- 3. MySQL database + user -----------------------------------------------------
 Write-Host "`n[3/6] Creating MySQL database 'ssc_booking' and user 'sscuser'..." -ForegroundColor Cyan
 if ($null -eq $MySqlRootPassword) {
-    $rootPwd = Read-Host "Enter your MySQL root password (blank if none, as in standard XAMPP)" -AsSecureString
-    $MySqlRootPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($rootPwd))
+    # Default to empty password for standard XAMPP MySQL installations
+    $MySqlRootPassword = ""
 }
 
 $sql = @'
 CREATE DATABASE IF NOT EXISTS ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS 'sscuser'@'localhost' IDENTIFIED BY 'sscpassword';
 CREATE USER IF NOT EXISTS 'sscuser'@'%' IDENTIFIED BY 'sscpassword';
+ALTER USER 'sscuser'@'localhost' IDENTIFIED BY 'sscpassword';
+ALTER USER 'sscuser'@'%' IDENTIFIED BY 'sscpassword';
 GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'localhost';
 GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'%';
 FLUSH PRIVILEGES;
 '@
-if ([string]::IsNullOrEmpty($MySqlRootPassword)) {
-    $sql | mysql -u root --skip-password
+
+if ($mysqlBin -and (Test-Path $mysqlBin)) {
+    if ([string]::IsNullOrEmpty($MySqlRootPassword)) {
+        $sql | & $mysqlBin -u root --skip-password
+    } else {
+        $sql | & $mysqlBin -u root --password=$MySqlRootPassword
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "MySQL setup failed - check the root password and that the MySQL service is running on port 3306." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "  Database ready. (Tables are created by Flyway on first backend start.)" -ForegroundColor Green
 } else {
-    $sql | mysql -u root --password=$MySqlRootPassword
+    Write-Host "  [WARNING] mysql.exe CLI not found. Please ensure 'ssc_booking' database and 'sscuser' account exist." -ForegroundColor Yellow
 }
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "MySQL setup failed - check the root password and that the MySQL service is running on port 3306." -ForegroundColor Red
-    exit 1
-}
-Write-Host "  Database ready. (Tables are created by Flyway on first backend start.)"
+
 
 # --- 4. MinIO -----------------------------------------------------------------------
 Write-Host "`n[4/6] Setting up MinIO..." -ForegroundColor Cyan
