@@ -206,18 +206,18 @@ if (Test-Path $minioExe) {
 }
 
 # --- 5. Build backend + fileserver ---------------------------------------------------
-Write-Host "`n[5/6] Building Main API and File Server (downloads Maven deps on first run)..." -ForegroundColor Cyan
+Write-Host "`n[5/6] Building Main API and File Server with Maven (packages JARs & runs isolated test suite)..." -ForegroundColor Cyan
 Push-Location (Join-Path $repo 'ssc-booking-backend')
-mvn -q clean package -DskipTests
+mvn clean package
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Backend build failed." -ForegroundColor Red; exit 1 }
 Pop-Location
-Write-Host "  Main API jar built."
+Write-Host "  Main API jar built successfully (isolated test validation passed)." -ForegroundColor Green
 
 Push-Location (Join-Path $repo 'ssc-booking-fileserver')
-mvn -q clean package -DskipTests
+mvn clean package
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "File server build failed." -ForegroundColor Red; exit 1 }
 Pop-Location
-Write-Host "  File server jar built."
+Write-Host "  File server jar built successfully." -ForegroundColor Green
 
 # --- 6. Frontend ----------------------------------------------------------------------
 Write-Host "`n[6/6] Installing and building the frontend..." -ForegroundColor Cyan
