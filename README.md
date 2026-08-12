@@ -301,15 +301,30 @@ logs/
    ```
 3. Run `scripts\stop-all.ps1` and restart.
 
-### Database Connection / Flyway Migration Error
+### Database Connection / Flyway Migration Error (XAMPP / MariaDB 15.1 / MySQL 8)
 
-- Verify MySQL is running: check XAMPP Control Panel or `Test-NetConnection -ComputerName 127.0.0.1 -Port 3306`.
-- Confirm `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE` in `.env` match your MySQL setup.
-- If Flyway fails with a migration/checksum error, reset the local database:
+- **Building & Packaging Services:** To compile and package the backend and fileserver without requiring an active database connection:
   ```powershell
-  mysql -u root -e "DROP DATABASE IF EXISTS ssc_booking; CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+  # Package Backend API
+  mvn clean package -f ssc-booking-backend/pom.xml
+
+  # Package File Server
+  mvn clean package -f ssc-booking-fileserver/pom.xml
   ```
-  Then re-run `scripts\SETUP.ps1`.
+  *(Note: Backend tests execute against an isolated in-memory H2 database via `application-test.yml`, ensuring build packaging succeeds hermetically).*
+
+- **XAMPP MySQL / MariaDB 15.1 Deployment:**
+  - Start MySQL/MariaDB from the **XAMPP Control Panel** (or verify with `Test-NetConnection -ComputerName 127.0.0.1 -Port 3306`).
+  - Ensure `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE` in `.env` match your XAMPP configuration.
+  - If Flyway migration fails on XAMPP due to dirty/failed schema records, reset the local database:
+    ```powershell
+    mysql -u root -e "DROP DATABASE IF EXISTS ssc_booking; CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    ```
+    Or repair existing Flyway schema history:
+    ```powershell
+    mvn flyway:repair -f ssc-booking-backend/pom.xml
+    ```
+  - Upon starting the backend, Flyway will run all 55 migrations cleanly from V1 through V55.
 
 ### Google OAuth Error (`redirect_uri_mismatch`)
 
