@@ -61,6 +61,8 @@ SSC-System/
 ├── .env                          ← Root environment configuration (edit this)
 ├── .gitignore
 ├── README.md                     ← This file
+├── docs/
+│   └── MASTERLIST_INTEGRATION_GUIDE.md  ← Integration guide for external projects
 ├── scripts/
 │   ├── SETUP.ps1                 ← First-time automated setup
 │   ├── start-all.ps1             ← Start all 4 services
