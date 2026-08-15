@@ -27,7 +27,16 @@ Host: your-ssc-domain.com
 X-API-Key: YOUR_CONFIGURED_API_KEY
 ```
 
-> 🔑 **Obtaining an API Key:** Request an API key from the SSC System Administrator. Each key is bound to a client identifier (e.g., `registrar-system`) and assigned explicit permissions.
+### Configured Integration API Keys Registry
+
+The table below lists the pre-configured integration client keys defined in `.env`:
+
+| Client System Name | System Role | Masterlist API Key (`X-API-Key`) | Sensitive Data Allowed (`includeSensitive=true`) | Fileserver API Key | Isolated MinIO Storage Folder |
+|---|---|---|:---:|---|---|
+| **`clearance-system`** | Student Clearance System | `064f4002044e257d5410bc0fb0a31d091a4a06c7a530e30e0c08b5c011b73b54` | ✅ `true` | `f7d2b66d3664739181b4eed50cd05d9687918b10780936cd4e611fed3836f1c3` | `projects/clearance-system/` |
+| **`clinic-system`** | Campus Clinic System | `326bcd86b8a63778f42289729eede712f47e356478fad0092fd47e975dc2ab7f` | ✅ `true` | `4317dd5f832e3bd24c1ec55723b05531415ef51a4b7ab684058bc2725b0c7e09` | `projects/clinic-system/` |
+
+> 🔑 **Environment Configuration:** Additional client systems or key rotations can be configured in the root `.env` file via `MASTERLIST_CLIENT_X_KEY` and `PROJECT_CLIENT_X_KEY`.
 
 ---
 
@@ -150,7 +159,8 @@ External callers can also resolve department and organization IDs:
 
 ### JavaScript / Node.js (`fetch`)
 ```javascript
-const API_KEY = "YOUR_API_KEY";
+// Clearance System Integration Key (or Clinic System Key)
+const API_KEY = "064f4002044e257d5410bc0fb0a31d091a4a06c7a530e30e0c08b5c011b73b54";
 const BASE_URL = "http://localhost:9004/api/v1/integration";
 
 async function fetchDepartmentMasterlist(departmentId, page = 0) {
@@ -178,7 +188,8 @@ async function fetchDepartmentMasterlist(departmentId, page = 0) {
 ```python
 import requests
 
-API_KEY = "YOUR_API_KEY"
+# Clearance System Integration Key (or Clinic System Key)
+API_KEY = "064f4002044e257d5410bc0fb0a31d091a4a06c7a530e30e0c08b5c011b73b54"
 BASE_URL = "http://localhost:9004/api/v1/integration"
 
 headers = {
