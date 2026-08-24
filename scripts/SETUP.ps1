@@ -1,252 +1,364 @@
 # SSC Event Booking System - one-time environment setup for Windows.
-# Installs prerequisites via Chocolatey, provisions the local MySQL database,
-# downloads MinIO, and builds all three app submodules.
 #
-# Run from the repo root, in an elevated (Administrator) PowerShell:
+# Run from the repository root in PowerShell:
 #   powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1
 #
-# Non-interactive (CI / automation):
-#   powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1 -MySqlRootPassword "yourpwd"
-#   (pass an empty string "" if root has no password)
+# Build-only setup (does not require MySQL):
+#   powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1 -SkipDatabase
+#
+# Command-line database parameters override values loaded from the root .env file.
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', 'MySqlRootPassword')]
 param(
-    [string]$MySqlRootPassword = $null
+    [string]$MySqlRootPassword = $null,
+    [string]$MySqlHost = $null,
+    [int]$MySqlPort = 0,
+    [string]$MySqlDatabase = $null,
+    [string]$MySqlUser = $null,
+    [string]$MySqlPassword = $null,
+    [switch]$SkipDatabase
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 
-Write-Host "=== SSC System setup ===" -ForegroundColor Cyan
-Write-Host "Repo root: $repo"
+function Import-SscDotEnv([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) { continue }
+        $separator = $trimmed.IndexOf('=')
+        if ($separator -lt 1) { continue }
+        $key = $trimmed.Substring(0, $separator).Trim()
+        $value = $trimmed.Substring($separator + 1).Trim()
+        if ($value.Length -ge 2 -and
+            (($value[0] -eq '"' -and $value[$value.Length - 1] -eq '"') -or
+             ($value[0] -eq "'" -and $value[$value.Length - 1] -eq "'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        [Environment]::SetEnvironmentVariable($key, $value, 'Process')
+    }
+}
 
-# --- 0. Require elevated session only if Chocolatey installs are needed -----------
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-    [Security.Principal.WindowsBuiltInRole]::Administrator)
+function Get-SscEnv([string]$Name, [string]$Default) {
+    $value = [Environment]::GetEnvironmentVariable($Name, 'Process')
+    if ($null -ne $value -and $value -ne '') { return $value }
+    return $Default
+}
 
-# --- 1. Check prerequisites & MySQL status ----------------------------------------
-Write-Host "`n[1/6] Checking prerequisites..." -ForegroundColor Cyan
+function Get-SscJavaMajor {
+    if (-not (Get-Command java -CommandType Application -ErrorAction SilentlyContinue)) { return 0 }
+    # java -version writes normal output to stderr. Windows PowerShell 5.1 turns
+    # redirected native stderr into an ErrorRecord when ErrorActionPreference=Stop,
+    # so capture it through cmd.exe instead.
+    $output = (& cmd.exe /d /c 'java -version 2>&1' | Out-String)
+    if ($output -match 'version\s+"(?<major>\d+)') { return [int]$Matches.major }
+    if ($output -match 'openjdk\s+(?<major>\d+)') { return [int]$Matches.major }
+    return 0
+}
 
-# Probe for mysql.exe in PATH or common XAMPP / MySQL paths and save path.
-$mysqlBin = Get-Command mysql -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-if (-not $mysqlBin) {
-    $knownMySqlPaths = @(
+function Get-SscNodeVersion {
+    if (-not (Get-Command node -CommandType Application -ErrorAction SilentlyContinue)) {
+        return [Version]'0.0.0'
+    }
+    $raw = ((& node --version) -replace '^v', '').Trim()
+    $version = [Version]'0.0.0'
+    if ([Version]::TryParse($raw, [ref]$version)) { return $version }
+    return [Version]'0.0.0'
+}
+
+function Find-SscMySqlClient {
+    $command = Get-Command mysql -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($command) { return $command.Source }
+    $candidates = @(
         'C:\xampp\mysql\bin\mysql.exe',
         'D:\xampp\mysql\bin\mysql.exe',
-        'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe',
-        'C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe',
-        'C:\Program Files (x86)\MySQL\MySQL Server 8.0\bin\mysql.exe'
+        'C:\Program Files\MariaDB 11.4\bin\mysql.exe',
+        'C:\Program Files\MariaDB 10.11\bin\mysql.exe'
     )
     if ($env:XAMPP_HOME) {
-        $knownMySqlPaths += (Join-Path $env:XAMPP_HOME 'mysql\bin\mysql.exe')
+        $candidates += (Join-Path $env:XAMPP_HOME 'mysql\bin\mysql.exe')
     }
-    foreach ($path in $knownMySqlPaths) {
-        if (Test-Path $path) {
-            $mysqlBin = $path
-            $binDir = Split-Path -Parent $path
-            $env:PATH = "$binDir;$env:PATH"
-            Write-Host ("  Found MySQL CLI at {0} (added to PATH)" -f $path) -ForegroundColor Green
-            break
-        }
+    $candidates += Get-ChildItem 'C:\Program Files\MySQL\MySQL Server *\bin\mysql.exe' -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty FullName
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate)) { return $candidate }
     }
+    return $null
 }
 
-# Verify MySQL is actively running on port 3306 (HARD STOP if not running)
-function Test-SscMySqlPort([int]$Port = 3306, [int]$TimeoutMs = 1000) {
-    try {
-        $client = [Net.Sockets.TcpClient]::new()
-        $iar = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
-        $ok = $iar.AsyncWaitHandle.WaitOne($TimeoutMs, $false) -and $client.Connected
-        $client.Close()
-        return [bool]$ok
-    } catch { return $false }
+function ConvertTo-SscMySqlLiteral([string]$Value) {
+    if ($null -eq $Value) { return '' }
+    return $Value.Replace('\', '\\').Replace("'", "''")
 }
 
-if (-not (Test-SscMySqlPort)) {
-    Write-Host "`n[ERROR] MySQL is NOT running on port 3306!" -ForegroundColor Red
-    Write-Host "Please start MySQL in the XAMPP Control Panel (or start your MySQL service) before running setup." -ForegroundColor Yellow
-    Write-Host "Setup aborted." -ForegroundColor Red
-    exit 1
+Import-SscDotEnv (Join-Path $repo '.env')
+
+if (-not $PSBoundParameters.ContainsKey('MySqlRootPassword')) {
+    $MySqlRootPassword = Get-SscEnv 'MYSQL_ROOT_PASSWORD' ''
+}
+if (-not $PSBoundParameters.ContainsKey('MySqlHost')) {
+    $MySqlHost = Get-SscEnv 'MYSQL_HOST' '127.0.0.1'
+}
+if (-not $PSBoundParameters.ContainsKey('MySqlPort')) {
+    $portText = Get-SscEnv 'MYSQL_PORT' '3306'
+    if (-not [int]::TryParse($portText, [ref]$MySqlPort) -or $MySqlPort -lt 1 -or $MySqlPort -gt 65535) {
+        throw "MYSQL_PORT must be a number between 1 and 65535 (received '$portText')."
+    }
+}
+if (-not $PSBoundParameters.ContainsKey('MySqlDatabase')) {
+    $MySqlDatabase = Get-SscEnv 'MYSQL_DATABASE' 'ssc_booking'
+}
+if (-not $PSBoundParameters.ContainsKey('MySqlUser')) {
+    $MySqlUser = Get-SscEnv 'MYSQL_USER' 'sscuser'
+}
+if (-not $PSBoundParameters.ContainsKey('MySqlPassword')) {
+    $MySqlPassword = Get-SscEnv 'MYSQL_PASSWORD' 'sscpassword'
+}
+if ([string]::IsNullOrWhiteSpace($MySqlHost)) { throw 'MYSQL_HOST cannot be empty.' }
+if ($MySqlPort -lt 1 -or $MySqlPort -gt 65535) { throw 'MYSQL_PORT must be between 1 and 65535.' }
+
+Write-Host '=== SSC System setup ===' -ForegroundColor Cyan
+Write-Host "Repo root: $repo"
+
+# --- 1. Prerequisites ---------------------------------------------------------------
+Write-Host "`n[1/6] Checking prerequisites..." -ForegroundColor Cyan
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+$installPackages = @()
+
+if (Get-Command git -CommandType Application -ErrorAction SilentlyContinue) {
+    Write-Host "  OK      $(& git --version)"
 } else {
-    Write-Host "  OK      MySQL service detected on port 3306 (using existing / XAMPP MySQL)" -ForegroundColor Green
+    Write-Host '  MISSING Git' -ForegroundColor Yellow
+    $installPackages += 'git'
 }
 
-# Dev tools managed by Chocolatey if missing (MySQL is excluded because existing MySQL/XAMPP is used).
-$tools = [ordered]@{
-    'git'   = 'git'
-    'java'  = 'temurin'
-    'mvn'   = 'maven'
-    'node'  = 'nodejs-lts'
-}
-
-$missing = @()
-foreach ($cmd in $tools.Keys) {
-    if (Get-Command $cmd -ErrorAction SilentlyContinue) {
-        Write-Host ("  OK      {0}" -f $cmd)
-    } else {
-        Write-Host ("  MISSING {0}" -f $cmd) -ForegroundColor Yellow
-        $missing += $cmd
-    }
-}
-
-if ($missing.Count -eq 0) {
-    Write-Host "  All dev prerequisites already installed - nothing to download." -ForegroundColor Green
+$javaMajor = Get-SscJavaMajor
+if ($javaMajor -eq 21) {
+    Write-Host '  OK      Java 21'
 } else {
+    $description = if ($javaMajor -eq 0) { 'missing' } else { "version $javaMajor (Java 21 is required)" }
+    Write-Host "  INVALID Java: $description" -ForegroundColor Yellow
+    $installPackages += 'temurin21'
+}
+
+$nodeVersion = Get-SscNodeVersion
+$minimumNode = [Version]'18.18.0'
+if ($nodeVersion -ge $minimumNode -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host "  OK      Node.js $nodeVersion"
+} else {
+    Write-Host "  INVALID Node.js: found $nodeVersion; version $minimumNode or newer with npm is required" -ForegroundColor Yellow
+    $installPackages += 'nodejs-lts'
+}
+
+if ($installPackages.Count -gt 0) {
     if (-not $isAdmin) {
-        Write-Host "`n[ERROR] Missing prerequisites ($($missing -join ', ')) need to be installed via Chocolatey." -ForegroundColor Red
-        Write-Host "Please re-run this script in an elevated (Administrator) PowerShell session." -ForegroundColor Yellow
+        Write-Host "`n[ERROR] Installation requires Administrator PowerShell: $($installPackages -join ', ')" -ForegroundColor Red
+        Write-Host 'Re-run this script as Administrator.' -ForegroundColor Yellow
         exit 1
     }
-
-    $packages = $missing | ForEach-Object { $tools[$_] }
-    Write-Host ("`n  Missing: {0} -> will install via Chocolatey: {1}" -f ($missing -join ', '), ($packages -join ', ')) -ForegroundColor Yellow
-
-    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-        Write-Host "  Chocolatey not found - installing..."
+    if (-not (Get-Command choco -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Host '  Chocolatey not found - installing...'
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
         Invoke-Expression ((New-Object Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-            Write-Host "Chocolatey install did not put 'choco' on PATH. Open a new PowerShell window and re-run this script." -ForegroundColor Red
-            exit 1
-        }
     }
-
-    choco install @packages -y
+    if (-not (Get-Command choco -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Host '[ERROR] Chocolatey was installed but is not available in this PowerShell session.' -ForegroundColor Red
+        Write-Host 'Open a new Administrator PowerShell and run setup again.' -ForegroundColor Yellow
+        exit 1
+    }
+    $installPackages = @($installPackages | Select-Object -Unique)
+    & choco install $installPackages -y
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Chocolatey package install failed - see output above." -ForegroundColor Red
+        Write-Host '[ERROR] Chocolatey package installation failed.' -ForegroundColor Red
         exit 1
     }
-
-    # Refresh PATH in this process so freshly-installed tools are usable without a new shell.
-    $chocoProfile = Join-Path $env:ChocolateyInstall 'helpers\chocolateyProfile.psm1'
-    if (Test-Path $chocoProfile) {
-        Import-Module $chocoProfile
-        refreshenv | Out-Null
+    $chocolateyInstall = [Environment]::GetEnvironmentVariable('ChocolateyInstall', 'Process')
+    if (-not $chocolateyInstall) {
+        $chocolateyInstall = [Environment]::GetEnvironmentVariable('ChocolateyInstall', 'Machine')
     }
-
-    $stillMissing = @()
-    foreach ($cmd in $missing) {
-        if (Get-Command $cmd -ErrorAction SilentlyContinue) {
-            Write-Host ("  OK      {0}" -f $cmd)
-        } else {
-            Write-Host ("  MISS    {0}" -f $cmd) -ForegroundColor Red
-            $stillMissing += $cmd
+    if ($chocolateyInstall) {
+        $profile = Join-Path $chocolateyInstall 'helpers\chocolateyProfile.psm1'
+        if (Test-Path -LiteralPath $profile) {
+            Import-Module $profile
+            refreshenv | Out-Null
         }
-    }
-    if ($stillMissing.Count -gt 0) {
-        Write-Host "`nStill missing after install: $($stillMissing -join ', ')" -ForegroundColor Red
-        Write-Host "Close this window, open a new (Administrator) PowerShell, and re-run this script -"
-        Write-Host "Chocolatey sometimes needs a fresh shell to pick up PATH changes."
-        exit 1
     }
 }
 
-# --- 2. Submodules ---------------------------------------------------------------
-Write-Host "`n[2/6] Checking submodules..." -ForegroundColor Cyan
-if (-not (Test-Path (Join-Path $repo 'ssc-booking-backend\pom.xml'))) {
-    Write-Host "  Submodules are empty. Running: git submodule update --init" -ForegroundColor Yellow
-    Push-Location $repo
-    git submodule update --init
+$preflightErrors = @()
+if (-not (Get-Command git -CommandType Application -ErrorAction SilentlyContinue)) { $preflightErrors += 'Git is unavailable' }
+if ((Get-SscJavaMajor) -ne 21) { $preflightErrors += 'Java 21 is not the active java executable' }
+if ((Get-SscNodeVersion) -lt $minimumNode) { $preflightErrors += "Node.js $minimumNode or newer is unavailable" }
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { $preflightErrors += 'npm is unavailable' }
+if ($preflightErrors.Count -gt 0) {
+    Write-Host "`n[ERROR] Prerequisite validation failed:" -ForegroundColor Red
+    $preflightErrors | ForEach-Object { Write-Host "  - $_" }
+    Write-Host 'Open a new PowerShell after installation. If multiple JDKs are installed, point JAVA_HOME and PATH to JDK 21.' -ForegroundColor Yellow
+    exit 1
+}
+Write-Host '  All prerequisite versions are valid.' -ForegroundColor Green
+
+# --- 2. Submodules ------------------------------------------------------------------
+Write-Host "`n[2/6] Initializing and checking submodules..." -ForegroundColor Cyan
+Push-Location $repo
+try {
+    & git submodule sync --recursive
+    if ($LASTEXITCODE -ne 0) { throw 'git submodule sync failed.' }
+    & git submodule update --init --recursive
+    if ($LASTEXITCODE -ne 0) { throw 'git submodule update failed. Check network access and repository permissions.' }
+} finally {
     Pop-Location
-} else {
-    Write-Host "  OK   submodules present"
 }
-
-# --- 3. MySQL database + user -----------------------------------------------------
-Write-Host "`n[3/6] Creating MySQL database 'ssc_booking' and user 'sscuser'..." -ForegroundColor Cyan
-if ($null -eq $MySqlRootPassword) {
-    # Default to empty password for standard XAMPP MySQL installations
-    $MySqlRootPassword = ""
+$requiredSubmoduleFiles = @(
+    'ssc-booking-backend\pom.xml',
+    'ssc-booking-fileserver\pom.xml',
+    'ssc-booking-frontend\package.json',
+    'ssc-booking-frontend\package-lock.json'
+)
+$missingSubmoduleFiles = @($requiredSubmoduleFiles | Where-Object {
+    -not (Test-Path -LiteralPath (Join-Path $repo $_))
+})
+if ($missingSubmoduleFiles.Count -gt 0) {
+    throw "Submodule initialization is incomplete. Missing: $($missingSubmoduleFiles -join ', ')"
 }
+Write-Host '  All application submodules are present.' -ForegroundColor Green
 
-$sql = @'
-CREATE DATABASE IF NOT EXISTS ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS 'sscuser'@'localhost' IDENTIFIED BY 'sscpassword';
-CREATE USER IF NOT EXISTS 'sscuser'@'%' IDENTIFIED BY 'sscpassword';
-ALTER USER 'sscuser'@'localhost' IDENTIFIED BY 'sscpassword';
-ALTER USER 'sscuser'@'%' IDENTIFIED BY 'sscpassword';
-GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'localhost';
-GRANT ALL PRIVILEGES ON ssc_booking.* TO 'sscuser'@'%';
-FLUSH PRIVILEGES;
-'@
-
-if ($mysqlBin -and (Test-Path $mysqlBin)) {
-    if ([string]::IsNullOrEmpty($MySqlRootPassword)) {
-        $sql | & $mysqlBin -u root --skip-password
-    } else {
-        $sql | & $mysqlBin -u root --password=$MySqlRootPassword
-    }
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "MySQL setup failed - check the root password and that the MySQL service is running on port 3306." -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "  Database ready. (Tables are created by Flyway on first backend start.)" -ForegroundColor Green
-} else {
-    Write-Host "  [WARNING] mysql.exe CLI not found. Please ensure 'ssc_booking' database and 'sscuser' account exist." -ForegroundColor Yellow
-}
-
-
-# --- 4. MinIO -----------------------------------------------------------------------
-Write-Host "`n[4/6] Setting up MinIO..." -ForegroundColor Cyan
+# --- 3. MinIO -----------------------------------------------------------------------
+Write-Host "`n[3/6] Setting up MinIO..." -ForegroundColor Cyan
 $minioDir = Join-Path $repo '.tools'
 $minioExe = Join-Path $minioDir 'minio.exe'
-New-Item -ItemType Directory -Force (Join-Path $minioDir 'minio-data') | Out-Null
-if (Test-Path $minioExe) {
-    Write-Host "  minio.exe already present."
-} else {
-    Write-Host "  Downloading minio.exe (~110 MB)..."
+$minioData = Join-Path $minioDir 'minio-data'
+New-Item -ItemType Directory -Force $minioData | Out-Null
+if (-not (Test-Path -LiteralPath $minioExe)) {
+    $downloadPath = "$minioExe.download"
+    Write-Host '  Downloading minio.exe...'
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
-    if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
-        & curl.exe -L -s -S -o $minioExe 'https://dl.min.io/server/minio/release/windows-amd64/minio.exe'
-    } else {
-        $handler = [System.Net.Http.HttpClientHandler]::new()
-        $handler.AllowAutoRedirect = $true
-        $client = [System.Net.Http.HttpClient]::new($handler)
-        $bytes = $client.GetByteArrayAsync('https://dl.min.io/server/minio/release/windows-amd64/minio.exe').GetAwaiter().GetResult()
-        [System.IO.File]::WriteAllBytes($minioExe, $bytes)
-        $client.Dispose()
-        $handler.Dispose()
+    try {
+        if (Get-Command curl.exe -CommandType Application -ErrorAction SilentlyContinue) {
+            & curl.exe -L --fail --silent --show-error -o $downloadPath 'https://dl.min.io/server/minio/release/windows-amd64/minio.exe'
+            if ($LASTEXITCODE -ne 0) { throw 'curl failed to download MinIO.' }
+        } else {
+            $client = [System.Net.Http.HttpClient]::new()
+            try {
+                $bytes = $client.GetByteArrayAsync('https://dl.min.io/server/minio/release/windows-amd64/minio.exe').GetAwaiter().GetResult()
+                [System.IO.File]::WriteAllBytes($downloadPath, $bytes)
+            } finally {
+                $client.Dispose()
+            }
+        }
+        if ((-not (Test-Path -LiteralPath $downloadPath)) -or (Get-Item -LiteralPath $downloadPath).Length -lt 1000000) {
+            throw 'Downloaded MinIO binary is missing or unexpectedly small.'
+        }
+        Move-Item -LiteralPath $downloadPath -Destination $minioExe -Force
+    } finally {
+        if (Test-Path -LiteralPath $downloadPath) { Remove-Item -LiteralPath $downloadPath -Force }
     }
-    if ((-not (Test-Path $minioExe)) -or ((Get-Item $minioExe).Length -lt 1000000)) {
-        Write-Host "MinIO binary download failed or output file is corrupt." -ForegroundColor Red
+}
+$minioVersion = (& $minioExe --version 2>&1 | Select-Object -First 1)
+if ($LASTEXITCODE -ne 0) { throw 'minio.exe exists but could not be executed.' }
+Write-Host "  OK      $minioVersion" -ForegroundColor Green
+
+# --- 4. Database --------------------------------------------------------------------
+Write-Host "`n[4/6] Database provisioning..." -ForegroundColor Cyan
+if ($SkipDatabase) {
+    Write-Host '  SKIPPED Database provisioning (-SkipDatabase).' -ForegroundColor Yellow
+} else {
+    if ($MySqlDatabase -notmatch '^[A-Za-z0-9_]+$') { throw 'MYSQL_DATABASE may contain only letters, numbers, and underscores.' }
+    if ($MySqlUser -notmatch '^[A-Za-z0-9_]+$') { throw 'MYSQL_USER may contain only letters, numbers, and underscores.' }
+    $mysqlBin = Find-SscMySqlClient
+    if (-not $mysqlBin) {
+        Write-Host '[ERROR] MySQL/MariaDB client was not found.' -ForegroundColor Red
+        Write-Host 'Install or start XAMPP/MySQL, or run setup with -SkipDatabase to build without provisioning it.' -ForegroundColor Yellow
         exit 1
     }
-    Write-Host "  Downloaded."
+    $escapedUserPassword = ConvertTo-SscMySqlLiteral $MySqlPassword
+    $sql = @"
+CREATE DATABASE IF NOT EXISTS ``$MySqlDatabase`` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '$MySqlUser'@'localhost' IDENTIFIED BY '$escapedUserPassword';
+CREATE USER IF NOT EXISTS '$MySqlUser'@'%' IDENTIFIED BY '$escapedUserPassword';
+ALTER USER '$MySqlUser'@'localhost' IDENTIFIED BY '$escapedUserPassword';
+ALTER USER '$MySqlUser'@'%' IDENTIFIED BY '$escapedUserPassword';
+GRANT ALL PRIVILEGES ON ``$MySqlDatabase``.* TO '$MySqlUser'@'localhost';
+GRANT ALL PRIVILEGES ON ``$MySqlDatabase``.* TO '$MySqlUser'@'%';
+FLUSH PRIVILEGES;
+"@
+    $hadMySqlPwd = Test-Path Env:MYSQL_PWD
+    $previousMySqlPwd = $env:MYSQL_PWD
+    try {
+        $env:MYSQL_PWD = $MySqlRootPassword
+        $sql | & $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root
+        if ($LASTEXITCODE -ne 0) {
+            throw "MySQL provisioning failed for $MySqlHost`:$MySqlPort. Check MYSQL_ROOT_PASSWORD and server availability."
+        }
+    } finally {
+        if ($hadMySqlPwd) { $env:MYSQL_PWD = $previousMySqlPwd } else { Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue }
+    }
+    Write-Host "  Database '$MySqlDatabase' and user '$MySqlUser' are ready." -ForegroundColor Green
 }
 
-# --- 5. Build backend + fileserver ---------------------------------------------------
-Write-Host "`n[5/6] Building Main API and File Server with Maven (packages JARs & runs isolated test suite)..." -ForegroundColor Cyan
-Push-Location (Join-Path $repo 'ssc-booking-backend')
-mvn clean package
-if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Backend build failed." -ForegroundColor Red; exit 1 }
-Pop-Location
-Write-Host "  Main API jar built successfully (isolated test validation passed)." -ForegroundColor Green
+# --- 5. Maven reactor build --------------------------------------------------------
+Write-Host "`n[5/6] Building backend services with the Maven Wrapper..." -ForegroundColor Cyan
+$mavenWrapper = Join-Path $repo 'mvnw.cmd'
+if (-not (Test-Path -LiteralPath $mavenWrapper)) { throw 'mvnw.cmd is missing from the repository root.' }
+Push-Location $repo
+$runtimeDatabaseEnvironment = @(
+    'SPRING_DATASOURCE_URL',
+    'SPRING_DATASOURCE_USERNAME',
+    'SPRING_DATASOURCE_PASSWORD',
+    'SPRING_DATASOURCE_DRIVER_CLASS_NAME'
+)
+$savedDatabaseEnvironment = @{}
+try {
+    # The root .env contains runtime MySQL overrides. Spring gives environment
+    # variables precedence over application-test.yml, so allowing those values
+    # into Surefire produces an invalid H2-driver/MySQL-URL combination.
+    foreach ($name in $runtimeDatabaseEnvironment) {
+        $savedDatabaseEnvironment[$name] = @{
+            Exists = Test-Path "Env:$name"
+            Value = [Environment]::GetEnvironmentVariable($name, 'Process')
+        }
+        Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+    }
+    & $mavenWrapper clean package
+    if ($LASTEXITCODE -ne 0) { throw 'Maven reactor build failed.' }
+} finally {
+    foreach ($name in $runtimeDatabaseEnvironment) {
+        $saved = $savedDatabaseEnvironment[$name]
+        if ($saved.Exists) {
+            [Environment]::SetEnvironmentVariable($name, $saved.Value, 'Process')
+        } else {
+            Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+        }
+    }
+    Pop-Location
+}
+Write-Host '  Backend and file server JARs built successfully.' -ForegroundColor Green
 
-Push-Location (Join-Path $repo 'ssc-booking-fileserver')
-mvn clean package
-if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "File server build failed." -ForegroundColor Red; exit 1 }
-Pop-Location
-Write-Host "  File server jar built successfully." -ForegroundColor Green
-
-# --- 6. Frontend ----------------------------------------------------------------------
+# --- 6. Frontend --------------------------------------------------------------------
 Write-Host "`n[6/6] Installing and building the frontend..." -ForegroundColor Cyan
-Push-Location (Join-Path $repo 'ssc-booking-frontend')
-if ((-not (Test-Path '.env.local')) -and (Test-Path '.env.local.example')) {
-    Copy-Item '.env.local.example' '.env.local'
-    Write-Host "  Created .env.local from .env.local.example (defaults: localhost)."
+$frontendDir = Join-Path $repo 'ssc-booking-frontend'
+Push-Location $frontendDir
+try {
+    if ((-not (Test-Path -LiteralPath '.env.local')) -and (Test-Path -LiteralPath '.env.local.example')) {
+        Copy-Item -LiteralPath '.env.local.example' -Destination '.env.local'
+        Write-Host '  Created .env.local from .env.local.example.'
+    }
+    & npm ci
+    if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+    & npm run build
+    if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
+} finally {
+    Pop-Location
 }
-npm install
-if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "npm install failed." -ForegroundColor Red; exit 1 }
-npm run build
-if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Frontend build failed." -ForegroundColor Red; exit 1 }
-Pop-Location
 
 Write-Host "`n=== Setup complete ===" -ForegroundColor Green
-Write-Host "Start each service in its own terminal:"
-Write-Host "  .tools\minio.exe server .tools\minio-data --address :9006 --console-address :9007   (set MINIO_ROOT_USER=sscadmin, MINIO_ROOT_PASSWORD=sscpassword123)"
-Write-Host "  cd ssc-booking-fileserver; java -jar target\*.jar --server.port=9005"
-Write-Host "  cd ssc-booking-backend;    java -jar target\*.jar --server.port=9004"
-Write-Host "  cd ssc-booking-frontend;   npm start -- -p 9003"
-Write-Host "Then open: http://localhost:9003/login"
-Write-Host "(Or just run scripts\start-all.ps1, which reads all of these ports from .env.)"
+if ($SkipDatabase) {
+    Write-Host 'Database provisioning was skipped. Provision MySQL before starting the backend.' -ForegroundColor Yellow
+}
+Write-Host 'Start all services with:'
+Write-Host '  powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1'
+Write-Host 'Then open: http://localhost:9003/login'

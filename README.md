@@ -43,14 +43,13 @@ Install the following before running the system:
 
 | Tool | Minimum Version | Download |
 |------|----------------|---------|
-| **Node.js** | 18.x LTS or higher | https://nodejs.org |
+| **Node.js** | 18.18 or higher | https://nodejs.org |
 | **Java JDK** | 21 | https://adoptium.net |
 | **MySQL** | 8.0 | https://dev.mysql.com/downloads/mysql/ |
-| **MinIO** | Latest (RELEASE.2024+) | https://min.io/download |
 | **PowerShell** | 5.1+ (built into Windows) | — |
 | **Git** | Any recent version | https://git-scm.com |
 
-> **Note:** Running `powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1` will automatically download and configure MinIO and verify all prerequisites.
+> **Note:** Setup installs missing Git, Java 21, and Node.js through Chocolatey when run as Administrator. MinIO and the pinned Maven version are downloaded automatically.
 
 ---
 
@@ -87,6 +86,8 @@ The single source of truth for all configuration is the root `.env` file.
 ```env
 # ── Database ─────────────────────────────────────────────────────────────────
 MYSQL_ROOT_PASSWORD=rootpassword    # Change for production use
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
 MYSQL_DATABASE=ssc_booking
 MYSQL_USER=sscuser
 MYSQL_PASSWORD=sscpassword          # Change for production use
@@ -133,7 +134,7 @@ Located at `ssc-booking-frontend/.env.local`. Values are automatically inherited
 ### Step 1: Clone the Repository
 
 ```powershell
-git clone <repository-url> SSC-System
+git clone --recurse-submodules <repository-url> SSC-System
 cd SSC-System
 git checkout LocalProd
 ```
@@ -141,35 +142,45 @@ git checkout LocalProd
 ### Step 2: Start MySQL (XAMPP or Windows Service)
 
 1. Start MySQL from the **XAMPP Control Panel** (or start your local MySQL service on port 3306).
-2. The setup script will automatically detect the running MySQL service and provision the `ssc_booking` database and `sscuser` account.
+2. Setup will connect using the root credentials from `.env` and provision the configured database and application user.
 
 > **Resetting / Re-creating the Database (if Flyway migration fails):**
 > ```powershell
 > mysql -u root -e "DROP DATABASE IF EXISTS ssc_booking; CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 > ```
 
-### Step 3: Run Automated Setup
+### Step 3: Configure `.env`
 
-This script verifies prerequisites, checks that MySQL is actively running on port 3306, provisions the database, downloads MinIO automatically (handling 302 redirects), and builds all application services:
+Edit the root `.env` before setup and update:
+
+- Database host, port, and credentials
+- `JWT_SECRET` (use a strong random string)
+- Mail settings if email notifications are needed
+
+### Step 4: Run Automated Setup
+
+This script loads the root `.env`, verifies required tool versions, initializes every Git submodule, provisions MySQL, downloads MinIO, and builds all application services:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1
 ```
 
-### Step 4: Configure `.env`
-
-Edit the root `.env` file and update:
-- Database credentials
-- `JWT_SECRET` (use a strong random string)
-- Mail settings if email notifications are needed
-
-### Step 5: Install Frontend Dependencies
+If MySQL is not installed yet, complete the build-only setup first:
 
 ```powershell
-cd ssc-booking-frontend
-npm install
-cd ..
+powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1 -SkipDatabase
 ```
+
+`-SkipDatabase` skips only database provisioning; backend tests still run against isolated H2. Before starting the services, install/start MySQL and run setup again without the switch. Database command-line parameters such as `-MySqlRootPassword`, `-MySqlHost`, and `-MySqlPort` override `.env`.
+
+### Step 5: Build Again Manually (Optional)
+
+```powershell
+.\mvnw.cmd clean package
+cd ssc-booking-frontend; npm ci; npm run build; cd ..
+```
+
+The root Maven reactor builds both Java services. Use the checked-in Maven Wrapper so every machine uses the same Maven version.
 
 ---
 
@@ -307,11 +318,7 @@ logs/
 
 - **Building & Packaging Services:** To compile and package the backend and fileserver without requiring an active database connection:
   ```powershell
-  # Package Backend API
-  mvn clean package -f ssc-booking-backend/pom.xml
-
-  # Package File Server
-  mvn clean package -f ssc-booking-fileserver/pom.xml
+  .\mvnw.cmd clean package
   ```
   *(Note: Backend tests execute against an isolated in-memory H2 database via `application-test.yml`, ensuring build packaging succeeds hermetically).*
 
