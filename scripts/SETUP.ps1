@@ -290,9 +290,37 @@ FLUSH PRIVILEGES;
     $previousMySqlPwd = $env:MYSQL_PWD
     try {
         $env:MYSQL_PWD = $MySqlRootPassword
+
+        # XAMPP's MariaDB privilege table uses the Aria engine. After an
+        # unclean shutdown its index can be marked as crashed: account rows
+        # remain visible through mysql.user, but ALTER USER fails with error
+        # 1396. Check and repair only that system table before provisioning.
+        $serverVersion = (& $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root `
+            --batch --skip-column-names --execute='SELECT VERSION();' | Select-Object -First 1)
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not connect to MySQL at $MySqlHost`:$MySqlPort as root. Check MYSQL_ROOT_PASSWORD and server availability."
+        }
+        if ($serverVersion -match 'MariaDB') {
+            $privilegeCheck = (& $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root `
+                --batch --skip-column-names --execute='CHECK TABLE mysql.global_priv;' | Out-String)
+            if ($LASTEXITCODE -ne 0) {
+                throw 'MariaDB privilege-table integrity check failed.'
+            }
+            if ($privilegeCheck -match '(?im)\b(corrupt|crashed|error)\b') {
+                Write-Host '  WARNING MariaDB privilege-table index is damaged; repairing mysql.global_priv...' -ForegroundColor Yellow
+                $privilegeRepair = (& $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root `
+                    --batch --skip-column-names --execute='REPAIR TABLE mysql.global_priv;' | Out-String)
+                if ($LASTEXITCODE -ne 0 -or $privilegeRepair -notmatch '(?im)\bstatus\s+OK\b') {
+                    Write-Host $privilegeRepair.TrimEnd() -ForegroundColor Red
+                    throw 'MariaDB privilege-table repair failed. Stop MySQL and repair mysql.global_priv with aria_chk before retrying setup.'
+                }
+                Write-Host '  OK      MariaDB privilege-table index repaired.' -ForegroundColor Green
+            }
+        }
+
         $sql | & $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root
         if ($LASTEXITCODE -ne 0) {
-            throw "MySQL provisioning failed for $MySqlHost`:$MySqlPort. Check MYSQL_ROOT_PASSWORD and server availability."
+            throw "MySQL provisioning failed for $MySqlHost`:$MySqlPort. Review the SQL error printed above."
         }
     } finally {
         if ($hadMySqlPwd) { $env:MYSQL_PWD = $previousMySqlPwd } else { Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue }
@@ -341,6 +369,20 @@ Write-Host '  Backend and file server JARs built successfully.' -ForegroundColor
 # --- 6. Frontend --------------------------------------------------------------------
 Write-Host "`n[6/6] Installing and building the frontend..." -ForegroundColor Cyan
 $frontendDir = Join-Path $repo 'ssc-booking-frontend'
+$serviceModule = Join-Path $PSScriptRoot 'ServiceLib.psm1'
+$restartManagedFrontend = $false
+if (Test-Path -LiteralPath $serviceModule) {
+    Import-Module $serviceModule -Force
+    $frontendStatus = Get-SscServiceStatus 'frontend'
+    if ($frontendStatus.Status -in @('RUNNING', 'STARTING')) {
+        Write-Host '  Stopping the managed frontend to release Windows file locks...' -ForegroundColor Yellow
+        Stop-SscService 'frontend'
+        $restartManagedFrontend = $true
+        Start-Sleep -Milliseconds 500
+    } elseif ($frontendStatus.Status -eq 'EXTERNAL') {
+        throw "Frontend port $($frontendStatus.Port) is owned by untracked PID $($frontendStatus.ProcessId). Stop that process before running setup so npm can replace the Next.js SWC binary."
+    }
+}
 Push-Location $frontendDir
 try {
     if ((-not (Test-Path -LiteralPath '.env.local')) -and (Test-Path -LiteralPath '.env.local.example')) {
@@ -353,6 +395,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
 } finally {
     Pop-Location
+    if ($restartManagedFrontend) {
+        Write-Host '  Restarting the managed frontend...' -ForegroundColor Yellow
+        Start-SscService 'frontend'
+    }
 }
 
 Write-Host "`n=== Setup complete ===" -ForegroundColor Green
