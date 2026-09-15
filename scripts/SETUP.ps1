@@ -219,6 +219,9 @@ $requiredSubmoduleFiles = @(
     'ssc-booking-backend\src\main\resources\db\migration\V59__seed_current_masterlists.sql',
     'ssc-booking-backend\src\main\resources\db\migration\V60__sync_active_departments_and_organizations.sql',
     'ssc-booking-backend\src\main\resources\db\migration\V61__store_approval_pins_on_users.sql',
+    'ssc-booking-backend\src\main\resources\db\migration\V62__introduce_ssc_endorser_role.sql',
+    'ssc-booking-backend\src\main\resources\db\migration\V63__add_staged_document_decisions.sql',
+    'ssc-booking-backend\src\main\resources\db\migration\V64__assign_academic_setting_ownership.sql',
     'ssc-booking-fileserver\pom.xml',
     'ssc-booking-frontend\package.json',
     'ssc-booking-frontend\package-lock.json'
@@ -233,6 +236,7 @@ Write-Host '  All application submodules are present.' -ForegroundColor Green
 Write-Host '  Bundled masterlist baseline is present (278 registrar records, 277 student profiles, 2 faculty records).' -ForegroundColor Green
 Write-Host '  Active directory baseline is present (6 departments, 5 organizations).' -ForegroundColor Green
 Write-Host '  Server-managed approval PIN migration is present.' -ForegroundColor Green
+Write-Host '  SSC Endorser and final-approval workflow migrations are present.' -ForegroundColor Green
 
 # --- 3. MinIO -----------------------------------------------------------------------
 Write-Host "`n[3/6] Setting up MinIO..." -ForegroundColor Cyan
@@ -414,5 +418,5 @@ if ($SkipDatabase) {
 }
 Write-Host 'Start all services with:'
 Write-Host '  powershell -ExecutionPolicy Bypass -File scripts\start-all.ps1'
-Write-Host 'The first backend start applies the ID, masterlist, directory, and approval PIN migrations automatically.'
+Write-Host 'The first backend start applies the ID, masterlist, directory, approval PIN, and staged endorsement migrations automatically.'
 Write-Host 'Then open: http://localhost:9003/login'
