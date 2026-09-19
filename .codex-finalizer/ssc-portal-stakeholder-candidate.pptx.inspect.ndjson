@@ -1,0 +1,194 @@
+{"kind":"deck","id":"pr/mheojz","name":"Deck"}
+{"kind":"layout","layoutId":"89c2347e-06ee-4e49-8ff7-341e70c13d47","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"2c935c75-2c58-40bf-8e72-b9aab97c787d","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/jq1aum","slide":1,"title":"One shared workflow for student activities","textShapes":6}
+{"kind":"shape","id":"sh/9sj2xcji","slide":1,"bbox":[0,0,620,720]}
+{"kind":"shape","id":"sh/mpsj2x0r","slide":1,"bbox":[0,0,14,720]}
+{"kind":"shape","id":"sh/nq1kv21c","slide":1,"bbox":[620,0,660,720]}
+{"kind":"shape","id":"sh/0nq10nil","slide":1,"bbox":[657,131,586,328]}
+{"kind":"shape","id":"sh/el8jyx0f","slide":1,"bbox":[706,514,42,5]}
+{"kind":"textbox","id":"sh/zmhkri10","slide":1,"text":"One shared workflow for student activities","textPreview":"One shared workflow for student activities","textChars":42,"textLines":1,"bbox":[706,539,480,62]}
+{"kind":"textbox","id":"sh/cjq1wnip","slide":1,"text":"For students, faculty moderators, and administrators","textPreview":"For students, faculty moderators, and administrators","textChars":52,"textLines":1,"bbox":[706,612,490,28]}
+{"kind":"textbox","id":"sh/dkz2psja","slide":1,"text":"SSC PORTAL","textPreview":"SSC PORTAL","textChars":10,"textLines":1,"bbox":[70,76,460,32]}
+{"kind":"textbox","id":"sh/hsr2hgbu","slide":1,"text":"A clearer path\nfrom proposal\nto approval","textPreview":"A clearer path | from proposal | to approval","textChars":40,"textLines":3,"bbox":[68,158,500,240]}
+{"kind":"textbox","id":"sh/gri1oba9","slide":1,"text":"Stakeholder presentation","textPreview":"Stakeholder presentation","textChars":24,"textLines":1,"bbox":[70,470,430,34]}
+{"kind":"textbox","id":"sh/vq9kf6to","slide":1,"text":"Cor Jesu College Student Services Center","textPreview":"Cor Jesu College Student Services Center","textChars":40,"textLines":1,"bbox":[70,520,470,48]}
+{"kind":"image","id":"im/cfqh0bml","slide":1,"name":"","geometry":"roundRect","alt":"SSC Portal landing page with the Cor Jesu College campus building","bbox":[670,144,560,302]}
+{"kind":"notes","id":"nt/jq1aum","slide":1,"text":"Speaker: Presenter 1\nApproximate speaking time: 0:30\n\nRecommended visual: Landing-page screenshot cropped to emphasize the campus building and portal identity.\n\nWhat to say:\nGood morning. Every campus event begins with an idea, but turning that idea into an approved activity requires coordination between students, moderators, and administrators. Our project, the SSC Portal, gives that coordination one clear path.\n\nSuggested transition:\nBefore we show the system, let us begin with the situation that made it necessary.\n\nEvidence: User-provided SSC Portal landing-page screenshot; project README."}
+{"kind":"slide","id":"sl/7ooee8","slide":2,"title":"The work starts before the event","textShapes":13}
+{"kind":"shape","id":"sh/b6lo7qx0","slide":2,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/c7u5gvyl","slide":2,"text":"The work starts before the event","textPreview":"The work starts before the event","textChars":32,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/d83690f6","slide":2,"text":"One proposal carries several kinds of information through several people","textPreview":"One proposal carries several kinds of information through several people","textChars":72,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"shape","id":"sh/y9wni5gr","slide":2,"bbox":[76,238,220,156]}
+{"kind":"textbox","id":"sh/za5obqxc","slide":2,"text":"EVENT DETAILS","textPreview":"EVENT DETAILS","textChars":13,"textLines":1,"bbox":[96,263,180,28]}
+{"kind":"textbox","id":"sh/0be5kvyh","slide":2,"text":"What is happening?","textPreview":"What is happening?","textChars":18,"textLines":1,"bbox":[96,310,180,50]}
+{"kind":"shape","id":"sh/lcn6d0f2","slide":2,"bbox":[372,238,220,156]}
+{"kind":"textbox","id":"sh/mdwnm5gn","slide":2,"text":"REQUIRED FILES","textPreview":"REQUIRED FILES","textChars":14,"textLines":1,"bbox":[392,263,180,28]}
+{"kind":"textbox","id":"sh/7e5ofax8","slide":2,"text":"What must be submitted?","textPreview":"What must be submitted?","textChars":23,"textLines":1,"bbox":[392,310,180,50]}
+{"kind":"shape","id":"sh/f69g3i5o","slide":2,"bbox":[668,238,220,156]}
+{"kind":"textbox","id":"sh/e5gzud43","slide":2,"text":"REVIEW","textPreview":"REVIEW","textChars":6,"textLines":1,"bbox":[688,263,180,28]}
+{"kind":"textbox","id":"sh/1sry58nu","slide":2,"text":"Who needs to act?","textPreview":"Who needs to act?","textChars":17,"textLines":1,"bbox":[688,310,180,50]}
+{"kind":"shape","id":"sh/grihwnm9","slide":2,"bbox":[964,238,220,156]}
+{"kind":"textbox","id":"sh/r2pgzy5s","slide":2,"text":"STATUS","textPreview":"STATUS","textChars":6,"textLines":1,"bbox":[984,263,180,28]}
+{"kind":"textbox","id":"sh/61gfqt47","slide":2,"text":"What happens next?","textPreview":"What happens next?","textChars":18,"textLines":1,"bbox":[984,310,180,50]}
+{"kind":"shape","id":"sh/t47y18ny","slide":2,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/s3yhs3md","slide":2,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/bytgb2lw","slide":2,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/qxkz2x4b","slide":2,"text":"When these pieces live in separate places, the next step becomes harder to see.","textPreview":"When these pieces live in separate places, the next step becomes harder to see.","textChars":79,"textLines":1,"bbox":[128,488,1024,60]}
+{"kind":"textbox","id":"sh/mt4ju1oj","slide":2,"text":"The risk is delay, missing requirements, and repeated follow-up.","textPreview":"The risk is delay, missing requirements, and repeated follow-up.","textChars":64,"textLines":1,"bbox":[235,562,810,40]}
+{"kind":"textbox","id":"sh/7udk3654","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"notes","id":"nt/7ooee8","slide":2,"text":"Speaker: Presenter 1\nApproximate speaking time: 0:45\n\nRecommended visual: Editable four-stage process diagram showing the information that travels with one proposal.\n\nWhat to say:\nThe challenge is not simply creating a form. One proposal carries event details, required documents, reviewer responsibilities, and a changing status. When those pieces are tracked separately, students may not know what is missing, reviewers may not know what needs attention, and administrators spend more time following up.\n\nSuggested transition:\nThat uncertainty affects each person differently.\n\nEvidence: Implemented submission, document, review, and status workflow in the backend and frontend."}
+{"kind":"slide","id":"sl/5xuvrs","slide":3,"title":"The same delay affects three roles","textShapes":12}
+{"kind":"shape","id":"sh/9gz25ovu","slide":3,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/mto3u9cj","slide":3,"text":"The same delay affects three roles","textPreview":"The same delay affects three roles","textChars":34,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/nexk3ed4","slide":3,"text":"Each person needs a different answer from the same proposal","textPreview":"Each person needs a different answer from the same proposal","textChars":59,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"textbox","id":"sh/0r6lszud","slide":3,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[72,190,76,60]}
+{"kind":"textbox","id":"sh/lsf214vy","slide":3,"text":"STUDENT","textPreview":"STUDENT","textChars":7,"textLines":1,"bbox":[175,195,250,30]}
+{"kind":"textbox","id":"sh/ypo3q9c7","slide":3,"text":"What do I need to submit, and where does my proposal stand?","textPreview":"What do I need to submit, and where does my proposal stand?","textChars":59,"textLines":1,"bbox":[425,186,760,66]}
+{"kind":"shape","id":"sh/zqxkzuds","slide":3,"bbox":[175,281,1010,2]}
+{"kind":"textbox","id":"sh/knal43ux","slide":3,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[72,334,76,60]}
+{"kind":"textbox","id":"sh/5ojmd8v2","slide":3,"text":"MODERATOR","textPreview":"MODERATOR","textChars":9,"textLines":1,"bbox":[175,339,250,30]}
+{"kind":"textbox","id":"sh/10zylgnq","slide":3,"text":"Which documents need my review, and what decision is required?","textPreview":"Which documents need my review, and what decision is required?","textChars":62,"textLines":1,"bbox":[425,330,760,66]}
+{"kind":"shape","id":"sh/gzqhcbm5","slide":3,"bbox":[175,425,1010,2]}
+{"kind":"textbox","id":"sh/fyhgjq5k","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[72,478,76,60]}
+{"kind":"textbox","id":"sh/ex8zal4f","slide":3,"text":"ADMINISTRATOR","textPreview":"ADMINISTRATOR","textChars":13,"textLines":1,"bbox":[175,483,250,30]}
+{"kind":"textbox","id":"sh/twfyhgnu","slide":3,"text":"Which record is current, and where is follow-up needed?","textPreview":"Which record is current, and where is follow-up needed?","textChars":55,"textLines":1,"bbox":[425,474,760,66]}
+{"kind":"textbox","id":"sh/sv6h8bm9","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"notes","id":"nt/5xuvrs","slide":3,"text":"Speaker: Presenter 1\nApproximate speaking time: 0:50\n\nRecommended visual: Three horizontal role statements, with one practical question for each user.\n\nWhat to say:\nA student needs clarity about requirements and status. A moderator needs to see assigned documents and the decision waiting for them. An administrator needs a reliable record of users, organizations, departments, and submissions. The system succeeds only when all three roles can work from the same information.\n\nSuggested transition:\nThat shared information became the central idea behind our solution.\n\nEvidence: Role model and role-scoped submission access in the backend API."}
+{"kind":"slide","id":"sl/yssl1r","slide":4,"title":"One shared path through the SSC Portal","textShapes":5}
+{"kind":"shape","id":"sh/u9kbehwz","slide":4,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/hcba9cvq","slide":4,"text":"One shared path through the SSC Portal","textPreview":"One shared path through the SSC Portal","textChars":38,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/wb2tgre5","slide":4,"text":"The portal turns each proposal into a visible journey.","textPreview":"The portal turns each proposal into a visible journey.","textChars":54,"textLines":1,"bbox":[66,162,430,90]}
+{"kind":"shape","id":"sh/jetsbmdg","slide":4,"bbox":[66,286,68,6]}
+{"kind":"textbox","id":"sh/idkbihwv","slide":4,"text":"Students see their next action.\nStaff see work waiting for review.\nAdministrators see the whole process.","textPreview":"Students see their next action. | Staff see work waiting for review. | Administrators see the whole process.","textChars":104,"textLines":3,"bbox":[66,324,445,150]}
+{"kind":"textbox","id":"sh/5gvudwvm","slide":4,"text":"One account. One current status.","textPreview":"One account. One current status.","textChars":32,"textLines":1,"bbox":[66,535,430,34]}
+{"kind":"textbox","id":"sh/ridcf6ds","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"image","id":"im/tozil8vi","slide":4,"name":"","geometry":"roundRect","alt":"Student dashboard showing submission counts and quick actions","bbox":[555,148,660,435]}
+{"kind":"notes","id":"nt/yssl1r","slide":4,"text":"Speaker: Presenter 1\nApproximate speaking time: 0:40\n\nRecommended visual: Actual student dashboard screenshot beside a short solution statement.\n\nWhat to say:\nOur idea is one shared portal built around the proposal journey. The student dashboard shows submissions, pending reviews, outcomes, and the next action. The same proposal then becomes visible to the people responsible for reviewing and managing it.\n\nSuggested transition:\nTo make this concrete, Presenter 2 will follow one proposal through the system.\n\nEvidence: User-provided student dashboard screenshot."}
+{"kind":"slide","id":"sl/6ugz9i","slide":5,"title":"Jeferson prepares a General Assembly","textShapes":12}
+{"kind":"shape","id":"sh/sfut4n29","slide":5,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/relcvi1o","slide":5,"text":"Jeferson prepares a General Assembly","textPreview":"Jeferson prepares a General Assembly","textChars":36,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/6dcb2xk3","slide":5,"text":"The proposal becomes a complete, readable record before submission","textPreview":"The proposal becomes a complete, readable record before submission","textChars":66,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"textbox","id":"sh/4but0n2d","slide":5,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[72,175,52,38]}
+{"kind":"textbox","id":"sh/jalcri1s","slide":5,"text":"Event context","textPreview":"Event context","textChars":13,"textLines":1,"bbox":[143,173,390,36]}
+{"kind":"textbox","id":"sh/i9cbydk7","slide":5,"text":"Category, department, type, date, venue, and expected participants","textPreview":"Category, department, type, date, venue, and expected participants","textChars":66,"textLines":1,"bbox":[143,218,410,62]}
+{"kind":"textbox","id":"sh/h83up83m","slide":5,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[72,321,52,38]}
+{"kind":"textbox","id":"sh/w7atw321","slide":5,"text":"Responsible people","textPreview":"Responsible people","textChars":18,"textLines":1,"bbox":[143,319,390,36]}
+{"kind":"textbox","id":"sh/ixo32dwj","slide":5,"text":"Applicant and faculty moderator appear in the same record","textPreview":"Applicant and faculty moderator appear in the same record","textChars":57,"textLines":1,"bbox":[143,364,410,62]}
+{"kind":"textbox","id":"sh/jyx4byd4","slide":5,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[72,467,52,38]}
+{"kind":"textbox","id":"sh/4z6l43ep","slide":5,"text":"Approval path","textPreview":"Approval path","textChars":13,"textLines":1,"bbox":[143,465,390,36]}
+{"kind":"textbox","id":"sh/50fmd8va","slide":5,"text":"The sign-off block makes the intended review path visible","textPreview":"The sign-off block makes the intended review path visible","textChars":57,"textLines":1,"bbox":[143,510,410,62]}
+{"kind":"textbox","id":"sh/uto3ytwn","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"image","id":"im/on2dgz25","slide":5,"name":"","geometry":"roundRect","alt":"Activity proposal preview for a General Assembly","bbox":[632,138,545,516]}
+{"kind":"notes","id":"nt/6ugz9i","slide":5,"text":"Speaker: Presenter 2\nApproximate speaking time: 0:55\n\nRecommended visual: Actual proposal preview screenshot, with three narrative points beside it.\n\nWhat to say:\nIn this example, Jeferson prepares a General Assembly proposal. Before submission, the portal presents the event as one readable record. The event details, responsible people, and intended sign-off path appear together. This lets the student confirm the proposal before it moves forward.\n\nSuggested transition:\nA complete proposal also depends on the right supporting documents.\n\nEvidence: User-provided activity proposal preview screenshot; implemented proposal data model."}
+{"kind":"slide","id":"sl/sm7ykz","slide":6,"title":"Requirements become a guided checklist","textShapes":9}
+{"kind":"shape","id":"sh/9gvq1kvq","slide":6,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/md4r65cz","slide":6,"text":"Requirements become a guided checklist","textPreview":"Requirements become a guided checklist","textChars":38,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/0bm94vu9","slide":6,"text":"The student can see","textPreview":"The student can see","textChars":19,"textLines":1,"bbox":[780,170,390,34]}
+{"kind":"shape","id":"sh/1cvqx0ve","slide":6,"bbox":[780,240,12,64]}
+{"kind":"textbox","id":"sh/e94r25w3","slide":6,"text":"Required files","textPreview":"Required files","textChars":14,"textLines":1,"bbox":[818,235,360,32]}
+{"kind":"textbox","id":"sh/zad8vqdo","slide":6,"text":"Each document has a clear name and owner.","textPreview":"Each document has a clear name and owner.","textChars":41,"textLines":1,"bbox":[818,279,360,50]}
+{"kind":"shape","id":"sh/cn2p0vex","slide":6,"bbox":[780,365,12,64]}
+{"kind":"textbox","id":"sh/d8bqt0vi","slide":6,"text":"Upload rules","textPreview":"Upload rules","textChars":12,"textLines":1,"bbox":[818,360,360,32]}
+{"kind":"textbox","id":"sh/tknmdoby","slide":6,"text":"Accepted format and maximum size appear before upload.","textPreview":"Accepted format and maximum size appear before upload.","textChars":54,"textLines":1,"bbox":[818,404,360,50]}
+{"kind":"shape","id":"sh/8je5kjat","slide":6,"bbox":[780,490,12,64]}
+{"kind":"textbox","id":"sh/7yl4bet8","slide":6,"text":"Completion status","textPreview":"Completion status","textChars":17,"textLines":1,"bbox":[818,485,360,32]}
+{"kind":"textbox","id":"sh/6xcni9sn","slide":6,"text":"The checklist shows what still needs attention.","textPreview":"The checklist shows what still needs attention.","textChars":47,"textLines":1,"bbox":[818,529,360,50]}
+{"kind":"textbox","id":"sh/lw3m9ob2","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"image","id":"im/6dkza5kv","slide":6,"name":"","geometry":"roundRect","alt":"Required documents upload checklist","bbox":[64,138,655,515]}
+{"kind":"notes","id":"nt/sm7ykz","slide":6,"text":"Speaker: Presenter 2\nApproximate speaking time: 0:55\n\nRecommended visual: Actual required-document checklist screenshot with three highlighted outcomes.\n\nWhat to say:\nInstead of asking students to remember every requirement, the portal turns the checklist into a guided step. Each required file has a name, an assigned reviewer, an accepted format, and a size limit. The student can see what remains before attempting to finalize the proposal.\n\nSuggested transition:\nOnce the student submits, the same record becomes visible to staff.\n\nEvidence: User-provided required documents screenshot; checklist and document policy implementation."}
+{"kind":"slide","id":"sl/quuxov","slide":7,"title":"The same event reaches the review queue","textShapes":4}
+{"kind":"shape","id":"sh/4fepwfe9","slide":7,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/3e58nado","slide":7,"text":"The same event reaches the review queue","textPreview":"The same event reaches the review queue","textChars":39,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/idw7u5w3","slide":7,"text":"Staff can search, filter, and open the proposal from one workspace","textPreview":"Staff can search, filter, and open the proposal from one workspace","textChars":66,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"shape","id":"sh/gbupsved","slide":7,"bbox":[865,548,305,58]}
+{"kind":"textbox","id":"sh/valojqds","slide":7,"text":"Status stays visible","textPreview":"Status stays visible","textChars":20,"textLines":1,"bbox":[884,566,267,24]}
+{"kind":"textbox","id":"sh/u9c7qlw7","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"image","id":"im/ofado7m9","slide":7,"name":"","geometry":"roundRect","alt":"Administrator events and submissions list","bbox":[62,150,1156,467]}
+{"kind":"notes","id":"nt/quuxov","slide":7,"text":"Speaker: Presenter 2\nApproximate speaking time: 0:50\n\nRecommended visual: Actual Events and Submissions screen, emphasizing visible states and the Review action.\n\nWhat to say:\nStaff do not need a separate copy of the event. The portal places the same proposal in a review queue, where its organization, event type, date, document count, and status remain visible. Draft and pending work can be distinguished immediately, and authorized staff can open the record for review.\n\nSuggested transition:\nThat workflow depends on accurate people and organization records behind it.\n\nEvidence: User-provided Events and Submissions screenshot; role-scoped submission listing."}
+{"kind":"slide","id":"sl/9p49wj","slide":8,"title":"Trusted records support every proposal","textShapes":10}
+{"kind":"shape","id":"sh/3qlcfqt0","slide":8,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/4rudoval","slide":8,"text":"Trusted records support every proposal","textPreview":"Trusted records support every proposal","textChars":38,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/5snuh0bq","slide":8,"text":"The current setup carries the approved masterlist and active directory","textPreview":"The current setup carries the approved masterlist and active directory","textChars":70,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"textbox","id":"sh/qtwvq5sb","slide":8,"text":"278","textPreview":"278","textChars":3,"textLines":1,"bbox":[68,144,142,70]}
+{"kind":"textbox","id":"sh/ru5cja9w","slide":8,"text":"registrar records","textPreview":"registrar records","textChars":17,"textLines":1,"bbox":[70,211,180,28]}
+{"kind":"textbox","id":"sh/svedsvah","slide":8,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[267,144,80,70]}
+{"kind":"textbox","id":"sh/dwnul0r2","slide":8,"text":"active organizations","textPreview":"active organizations","textChars":20,"textLines":1,"bbox":[269,211,190,28]}
+{"kind":"textbox","id":"sh/exwvu5sn","slide":8,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[484,144,80,70]}
+{"kind":"textbox","id":"sh/fy5cna98","slide":8,"text":"departments and offices","textPreview":"departments and offices","textChars":23,"textLines":1,"bbox":[486,211,220,28]}
+{"kind":"shape","id":"sh/61sbeloz","slide":8,"bbox":[70,320,315,296]}
+{"kind":"shape","id":"sh/to3up0nq","slide":8,"bbox":[94,410,8,86]}
+{"kind":"textbox","id":"sh/snatgv65","slide":8,"text":"Personal student details\nhidden for presentation","textPreview":"Personal student details | hidden for presentation","textChars":48,"textLines":2,"bbox":[122,422,235,64]}
+{"kind":"textbox","id":"sh/50julg7e","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"image","id":"im/cnmlgjut","slide":8,"name":"","geometry":"roundRect","alt":"Masterlist with 278 registrar records","bbox":[65,276,690,345]}
+{"kind":"image","id":"im/oz2lczuh","slide":8,"name":"","geometry":"roundRect","alt":"Active organizations directory","bbox":[785,276,430,158]}
+{"kind":"image","id":"im/p0b254v2","slide":8,"name":"","geometry":"roundRect","alt":"Departments and offices directory","bbox":[785,462,430,159]}
+{"kind":"notes","id":"nt/9p49wj","slide":8,"text":"Speaker: Presenter 2\nApproximate speaking time: 0:55\n\nRecommended visual: Actual masterlist, organization, and department screens with verified record counts.\n\nWhat to say:\nEvery proposal relies on trusted identity and directory data. The current migration carries 278 registrar records, five active organizations, and six departments or offices. Student and faculty IDs accept numeric values without forcing one display format, which protects valid records from inconsistent source formatting. Presenter 3 will now connect this workflow to stakeholder value, readiness, and next steps.\n\nSuggested transition:\nThe value appears in the questions each role can now answer.\n\nEvidence: Screenshots supplied by the user; migrations V58 through V61; clean database verification."}
+{"kind":"slide","id":"sl/cs4bq9","slide":9,"title":"Value for each stakeholder","textShapes":10}
+{"kind":"shape","id":"sh/8bqx8v29","slide":9,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/7ahgfqlo","slide":9,"text":"Value for each stakeholder","textPreview":"Value for each stakeholder","textChars":26,"textLines":1,"bbox":[66,46,900,58]}
+{"kind":"textbox","id":"sh/m98f65k3","slide":9,"text":"STUDENT","textPreview":"STUDENT","textChars":7,"textLines":1,"bbox":[72,158,230,28]}
+{"kind":"textbox","id":"sh/l8zyd03y","slide":9,"text":"Knows what to submit and where the proposal stands","textPreview":"Knows what to submit and where the proposal stands","textChars":50,"textLines":1,"bbox":[315,150,850,58]}
+{"kind":"shape","id":"sh/knqx4v2d","slide":9,"bbox":[315,230,850,2]}
+{"kind":"textbox","id":"sh/zmhwbqls","slide":9,"text":"MODERATOR","textPreview":"MODERATOR","textChars":9,"textLines":1,"bbox":[72,276,230,28]}
+{"kind":"textbox","id":"sh/yl8f2lk7","slide":9,"text":"Sees assigned documents and the review waiting for action","textPreview":"Sees assigned documents and the review waiting for action","textChars":57,"textLines":1,"bbox":[315,268,850,58]}
+{"kind":"shape","id":"sh/543y9k32","slide":9,"bbox":[315,348,850,2]}
+{"kind":"textbox","id":"sh/43axgf2h","slide":9,"text":"ADMINISTRATOR","textPreview":"ADMINISTRATOR","textChars":13,"textLines":1,"bbox":[72,394,230,28]}
+{"kind":"textbox","id":"sh/eh0nax8n","slide":9,"text":"Works from one current record across the process","textPreview":"Works from one current record across the process","textChars":48,"textLines":1,"bbox":[315,386,850,58]}
+{"kind":"shape","id":"sh/zi9o32p8","slide":9,"bbox":[315,466,850,2]}
+{"kind":"textbox","id":"sh/0ji5cnqt","slide":9,"text":"STAKEHOLDER","textPreview":"STAKEHOLDER","textChars":11,"textLines":1,"bbox":[72,512,230,28]}
+{"kind":"textbox","id":"sh/1kb65s7e","slide":9,"text":"Gains clearer status, accountability, and continuity","textPreview":"Gains clearer status, accountability, and continuity","textChars":52,"textLines":1,"bbox":[315,504,850,58]}
+{"kind":"textbox","id":"sh/qd0n6d8r","slide":9,"text":"The benefit comes from shared visibility, not from adding another form.","textPreview":"The benefit comes from shared visibility, not from adding another form.","textChars":71,"textLines":1,"bbox":[140,632,1000,38]}
+{"kind":"notes","id":"nt/cs4bq9","slide":9,"text":"Speaker: Presenter 3\nApproximate speaking time: 0:50\n\nRecommended visual: Four role-based outcomes on a dark background, with no feature grid.\n\nWhat to say:\nThe portal creates a different benefit for each stakeholder. Students gain clarity. Moderators see the work assigned to them. Administrators work from a current record instead of reconciling separate copies. Stakeholders gain a process whose status and responsibility remain visible from proposal creation through review.\n\nSuggested transition:\nThat experience rests on a straightforward technical foundation.\n\nEvidence: Implemented role-based screens, document review workflow, status timeline, and administrative records."}
+{"kind":"slide","id":"sl/65du50","slide":10,"title":"What happens behind the screen","textShapes":13}
+{"kind":"shape","id":"sh/vqx8zmxk","slide":10,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/wr698re5","slide":10,"text":"What happens behind the screen","textPreview":"What happens behind the screen","textChars":30,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/xsfq1cfq","slide":10,"text":"The technology keeps the experience connected without making decisions for people","textPreview":"The technology keeps the experience connected without making decisions for people","textChars":81,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"shape","id":"sh/it8rahwb","slide":10,"bbox":[72,214,230,154]}
+{"kind":"textbox","id":"sh/juh83mxw","slide":10,"text":"WEB PORTAL","textPreview":"WEB PORTAL","textChars":10,"textLines":1,"bbox":[96,242,180,26]}
+{"kind":"textbox","id":"sh/kvq9cre1","slide":10,"text":"Students and staff\nuse one portal","textPreview":"Students and staff | use one portal","textChars":33,"textLines":2,"bbox":[96,286,180,62]}
+{"kind":"shape","id":"sh/5wzq5wvm","slide":10,"bbox":[442,184,330,214]}
+{"kind":"textbox","id":"sh/ex47yxwr","slide":10,"text":"APPLICATION SERVICES","textPreview":"APPLICATION SERVICES","textChars":20,"textLines":1,"bbox":[474,216,265,26]}
+{"kind":"textbox","id":"sh/zyd8r2xc","slide":10,"text":"Applies access rules,\nchecks requirements,\nand moves the workflow","textPreview":"Applies access rules, | checks requirements, | and moves the workflow","textChars":65,"textLines":3,"bbox":[474,266,260,100]}
+{"kind":"shape","id":"sh/fi1oby98","slide":10,"bbox":[914,162,270,126]}
+{"kind":"textbox","id":"sh/ehs7it8n","slide":10,"text":"DATABASE","textPreview":"DATABASE","textChars":8,"textLines":1,"bbox":[940,187,210,24]}
+{"kind":"textbox","id":"sh/1k36d8re","slide":10,"text":"Stores records\nand status history","textPreview":"Stores records | and status history","textChars":33,"textLines":2,"bbox":[940,224,210,55]}
+{"kind":"shape","id":"sh/0japk3qt","slide":10,"bbox":[914,330,270,126]}
+{"kind":"textbox","id":"sh/re1o7y9w","slide":10,"text":"FILE STORAGE","textPreview":"FILE STORAGE","textChars":12,"textLines":1,"bbox":[940,355,210,24]}
+{"kind":"textbox","id":"sh/qdsnet8r","slide":10,"text":"Keeps uploaded files\ntogether","textPreview":"Keeps uploaded files | together","textChars":29,"textLines":2,"bbox":[940,392,210,55]}
+{"kind":"shape","id":"sh/dgj698r2","slide":10,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/sfa5g3qh","slide":10,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/3aho3e90","slide":10,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/ip8na9sf","slide":10,"bbox":[72,522,1112,92]}
+{"kind":"textbox","id":"sh/6lo7m9c7","slide":10,"text":"AI STATUS","textPreview":"AI STATUS","textChars":9,"textLines":1,"bbox":[96,545,118,24]}
+{"kind":"textbox","id":"sh/7mhofets","slide":10,"text":"The current system uses defined workflow rules. Authorized people make every approval decision.","textPreview":"The current system uses defined workflow rules. Authorized people make every approval decision.","textChars":95,"textLines":1,"bbox":[230,536,915,48]}
+{"kind":"textbox","id":"sh/8nqpojud","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"notes","id":"nt/65du50","slide":10,"text":"Speaker: Presenter 3\nApproximate speaking time: 0:55\n\nRecommended visual: Editable architecture diagram using plain-language labels for browser, services, database, and file storage.\n\nWhat to say:\nBehind the screen, the web portal connects to application services that apply access rules, check requirements, and move each proposal through its status flow. The database keeps records and history, while separate file storage holds uploaded documents. The current system does not use AI to approve or reject proposals. Authorized people make those decisions, and the system provides consistent information for them.\n\nSuggested transition:\nWe have also tested whether this foundation can be set up and used reliably.\n\nEvidence: Project README architecture; Next.js frontend; Spring Boot services; MariaDB/MySQL; MinIO; repository search found no implemented AI service."}
+{"kind":"slide","id":"sl/kn3uhq","slide":11,"title":"Ready for stakeholder validation","textShapes":14}
+{"kind":"shape","id":"sh/0nqtsza9","slide":11,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/fmhczu9o","slide":11,"text":"Ready for stakeholder validation","textPreview":"Ready for stakeholder validation","textChars":32,"textLines":1,"bbox":[66,38,1138,58]}
+{"kind":"textbox","id":"sh/el8bqps3","slide":11,"text":"The core workflow works today, with clear steps before wider rollout","textPreview":"The core workflow works today, with clear steps before wider rollout","textChars":68,"textLines":1,"bbox":[68,100,1120,34]}
+{"kind":"textbox","id":"sh/dkfuxkri","slide":11,"text":"36","textPreview":"36","textChars":2,"textLines":1,"bbox":[72,170,120,70]}
+{"kind":"textbox","id":"sh/sj6tofax","slide":11,"text":"backend tests passed","textPreview":"backend tests passed","textChars":20,"textLines":1,"bbox":[74,239,190,28]}
+{"kind":"textbox","id":"sh/rixcva9c","slide":11,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[290,170,100,70]}
+{"kind":"textbox","id":"sh/qhobm5sr","slide":11,"text":"browser scenarios passed","textPreview":"browser scenarios passed","textChars":24,"textLines":1,"bbox":[292,239,220,28]}
+{"kind":"textbox","id":"sh/xgjut4rm","slide":11,"text":"V61","textPreview":"V61","textChars":3,"textLines":1,"bbox":[544,170,130,70]}
+{"kind":"textbox","id":"sh/cfad0jah","slide":11,"text":"clean setup verified","textPreview":"clean setup verified","textChars":20,"textLines":1,"bbox":[546,239,190,28]}
+{"kind":"shape","id":"sh/elkza94v","slide":11,"bbox":[66,318,2,270]}
+{"kind":"textbox","id":"sh/fmtg3ulg","slide":11,"text":"READY TODAY","textPreview":"READY TODAY","textChars":11,"textLines":1,"bbox":[92,320,390,28]}
+{"kind":"textbox","id":"sh/gn2hczm1","slide":11,"text":"Core student and review workflow\nCurrent masterlist and active directory\nRepeatable Windows setup and migrations\nProduction frontend build","textPreview":"Core student and review workflow | Current masterlist and active directory | Repeatable Windows setup and migrations | Production fronten...","textChars":138,"textLines":4,"bbox":[92,366,475,178]}
+{"kind":"shape","id":"sh/1oby543m","slide":11,"bbox":[648,318,2,270]}
+{"kind":"textbox","id":"sh/6x0f6p4z","slide":11,"text":"NEXT BEFORE WIDER ROLLOUT","textPreview":"NEXT BEFORE WIDER ROLLOUT","textChars":25,"textLines":1,"bbox":[674,320,460,28]}
+{"kind":"textbox","id":"sh/ry9gzu5k","slide":11,"text":"Stakeholder user acceptance testing\nProduction credentials and access policy\nEmail, backup, and deployment configuration\nOptional AI assistance requires policy review","textPreview":"Stakeholder user acceptance testing | Production credentials and access policy | Email, backup, and deployment configuration | Optional A...","textChars":166,"textLines":4,"bbox":[674,366,500,178]}
+{"kind":"textbox","id":"sh/szix8zm5","slide":11,"text":"Planned AI option: document completeness hints or draft summaries. No AI approval decisions.","textPreview":"Planned AI option: document completeness hints or draft summaries. No AI approval decisions.","textChars":92,"textLines":1,"bbox":[92,619,1080,38]}
+{"kind":"textbox","id":"sh/t0by143q","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1190,676,42,24]}
+{"kind":"notes","id":"nt/kn3uhq","slide":11,"text":"Speaker: Presenter 3\nApproximate speaking time: 1:05\n\nRecommended visual: Three verified progress numbers, followed by a clear Ready Today and Next Before Wider Rollout split.\n\nWhat to say:\nThe current build has passed 36 backend tests, 12 browser scenarios, and a clean database setup through migration V61. The core student and review workflow is implemented, and the current records travel with a new installation. Before wider rollout, we recommend formal stakeholder user acceptance testing, production credential and access policies, and final email, backup, and deployment configuration. AI assistance could later help identify incomplete documents or summarize drafts, but that capability is planned only and would require stakeholder policy review.\n\nSuggested transition:\nThis leaves us with one practical question: what changes when every event has a clear next step?\n\nEvidence: Latest Maven test reports; Playwright run; clean V1–V61 migration verification; setup documentation."}
+{"kind":"slide","id":"sl/36jaxy","slide":12,"title":"SSC PORTAL","textShapes":5}
+{"kind":"textbox","id":"sh/z65cby98","slide":12,"text":"SSC PORTAL","textPreview":"SSC PORTAL","textChars":10,"textLines":1,"bbox":[68,56,340,32]}
+{"kind":"textbox","id":"sh/07etk3qd","slide":12,"text":"Every event begins\nwith a clear next step","textPreview":"Every event begins | with a clear next step","textChars":41,"textLines":2,"bbox":[68,166,1040,158]}
+{"kind":"shape","id":"sh/l8nud8ry","slide":12,"bbox":[68,378,94,7]}
+{"kind":"textbox","id":"sh/m9wbmd8j","slide":12,"text":"A shared proposal journey gives students clarity, staff a focused review queue, and stakeholders a process they can follow.","textPreview":"A shared proposal journey gives students clarity, staff a focused review queue, and stakeholders a process they can follow.","textChars":123,"textLines":1,"bbox":[68,426,960,94]}
+{"kind":"shape","id":"sh/napcfi94","slide":12,"bbox":[68,574,586,74]}
+{"kind":"textbox","id":"sh/8bytonqp","slide":12,"text":"Next step: stakeholder user testing","textPreview":"Next step: stakeholder user testing","textChars":35,"textLines":1,"bbox":[94,598,535,28]}
+{"kind":"textbox","id":"sh/9c7uhsra","slide":12,"text":"Thank you","textPreview":"Thank you","textChars":9,"textLines":1,"bbox":[1010,618,190,38]}
+{"kind":"notes","id":"nt/36jaxy","slide":12,"text":"Speaker: Presenter 3\nApproximate speaking time: 0:35\n\nRecommended visual: Minimal closing slide in the portal’s primary red, with one recommendation.\n\nWhat to say:\nThe expected impact is a proposal process that people can understand and follow. Students know what to do next, staff can focus on the review in front of them, and stakeholders gain clearer visibility from planning through approval. Our recommended next step is stakeholder user testing with real scenarios. Thank you, and we welcome your questions.\n\nSuggested transition:\nOpen the floor for stakeholder questions and feedback.\n\nEvidence: Synthesis of implemented workflow and verified project status."}
