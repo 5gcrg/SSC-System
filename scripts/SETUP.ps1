@@ -88,6 +88,20 @@ function Find-SscMySqlClient {
     return $null
 }
 
+function Test-SscTcpEndpoint([string]$HostName, [int]$Port, [int]$TimeoutMs = 1000) {
+    try {
+        $client = [Net.Sockets.TcpClient]::new()
+        try {
+            $connection = $client.BeginConnect($HostName, $Port, $null, $null)
+            return $connection.AsyncWaitHandle.WaitOne($TimeoutMs, $false) -and $client.Connected
+        } finally {
+            $client.Close()
+        }
+    } catch {
+        return $false
+    }
+}
+
 function ConvertTo-SscMySqlLiteral([string]$Value) {
     if ($null -eq $Value) { return '' }
     return $Value.Replace('\', '\\').Replace("'", "''")
@@ -118,6 +132,20 @@ if (-not $PSBoundParameters.ContainsKey('MySqlPassword')) {
 }
 if ([string]::IsNullOrWhiteSpace($MySqlHost)) { throw 'MYSQL_HOST cannot be empty.' }
 if ($MySqlPort -lt 1 -or $MySqlPort -gt 65535) { throw 'MYSQL_PORT must be between 1 and 65535.' }
+
+# Fail before setup downloads, installs, or builds anything when the external
+# database is unavailable. The mysql client alone does not mean XAMPP/MariaDB is
+# running, and a connection failure must never be confused with a setup change.
+$mysqlBin = $null
+if (-not $SkipDatabase) {
+    $mysqlBin = Find-SscMySqlClient
+    if (-not $mysqlBin) {
+        throw 'MySQL/MariaDB client was not found. Install XAMPP/MySQL, or run setup with -SkipDatabase.'
+    }
+    if (-not (Test-SscTcpEndpoint -HostName $MySqlHost -Port $MySqlPort)) {
+        throw "MySQL/MariaDB is not running at $MySqlHost`:$MySqlPort. Start it in the XAMPP Control Panel, wait until it is green, and run setup again. No database changes were made."
+    }
+}
 
 Write-Host '=== SSC System setup ===' -ForegroundColor Cyan
 Write-Host "Repo root: $repo"
@@ -282,12 +310,6 @@ if ($SkipDatabase) {
 } else {
     if ($MySqlDatabase -notmatch '^[A-Za-z0-9_]+$') { throw 'MYSQL_DATABASE may contain only letters, numbers, and underscores.' }
     if ($MySqlUser -notmatch '^[A-Za-z0-9_]+$') { throw 'MYSQL_USER may contain only letters, numbers, and underscores.' }
-    $mysqlBin = Find-SscMySqlClient
-    if (-not $mysqlBin) {
-        Write-Host '[ERROR] MySQL/MariaDB client was not found.' -ForegroundColor Red
-        Write-Host 'Install or start XAMPP/MySQL, or run setup with -SkipDatabase to build without provisioning it.' -ForegroundColor Yellow
-        exit 1
-    }
     $escapedUserPassword = ConvertTo-SscMySqlLiteral $MySqlPassword
     $sql = @"
 CREATE DATABASE IF NOT EXISTS ``$MySqlDatabase`` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -304,10 +326,11 @@ FLUSH PRIVILEGES;
     try {
         $env:MYSQL_PWD = $MySqlRootPassword
 
-        # XAMPP's MariaDB privilege table uses the Aria engine. After an
-        # unclean shutdown its index can be marked as crashed: account rows
-        # remain visible through mysql.user, but ALTER USER fails with error
-        # 1396. Check and repair only that system table before provisioning.
+        # XAMPP's MariaDB privilege tables use the non-transactional Aria
+        # engine and can be left damaged by an unclean server shutdown. Check
+        # every table this provisioning SQL writes before making any changes.
+        # Setup never repairs system tables automatically: a failed Aria
+        # repair can rebuild a corrupt table without all of its original rows.
         $serverVersion = (& $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root `
             --batch --skip-column-names --execute='SELECT VERSION();' | Select-Object -First 1)
         if ($LASTEXITCODE -ne 0) {
@@ -315,19 +338,13 @@ FLUSH PRIVILEGES;
         }
         if ($serverVersion -match 'MariaDB') {
             $privilegeCheck = (& $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root `
-                --batch --skip-column-names --execute='CHECK TABLE mysql.global_priv;' | Out-String)
+                --batch --skip-column-names --execute='CHECK TABLE mysql.global_priv, mysql.db;' | Out-String)
             if ($LASTEXITCODE -ne 0) {
                 throw 'MariaDB privilege-table integrity check failed.'
             }
             if ($privilegeCheck -match '(?im)\b(corrupt|crashed|error)\b') {
-                Write-Host '  WARNING MariaDB privilege-table index is damaged; repairing mysql.global_priv...' -ForegroundColor Yellow
-                $privilegeRepair = (& $mysqlBin --protocol=tcp --host=$MySqlHost --port=$MySqlPort --user=root `
-                    --batch --skip-column-names --execute='REPAIR TABLE mysql.global_priv;' | Out-String)
-                if ($LASTEXITCODE -ne 0 -or $privilegeRepair -notmatch '(?im)\bstatus\s+OK\b') {
-                    Write-Host $privilegeRepair.TrimEnd() -ForegroundColor Red
-                    throw 'MariaDB privilege-table repair failed. Stop MySQL and repair mysql.global_priv with aria_chk before retrying setup.'
-                }
-                Write-Host '  OK      MariaDB privilege-table index repaired.' -ForegroundColor Green
+                Write-Host $privilegeCheck.TrimEnd() -ForegroundColor Red
+                throw 'MariaDB privilege tables are damaged. Setup stopped before changing accounts or grants. Back up the XAMPP data directory and repair or restore the affected tables before retrying.'
             }
         }
 

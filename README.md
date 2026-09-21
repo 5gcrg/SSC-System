@@ -165,6 +165,16 @@ This script loads the root `.env`, verifies required tool versions, initializes 
 powershell -ExecutionPolicy Bypass -File scripts\SETUP.ps1
 ```
 
+Setup now checks that MySQL/MariaDB is accepting TCP connections before it
+downloads, installs, builds, or changes database objects. If XAMPP MySQL is
+stopped, setup exits without making database changes; start MySQL, wait for the
+control-panel indicator to turn green, and rerun the same command.
+
+If setup reports a damaged XAMPP MariaDB privilege table, it stops before
+changing any accounts or grants. Back up the XAMPP `mysql\data` directory and
+repair or restore the named table before retrying; setup does not perform
+implicit system-table repairs.
+
 If MySQL is not installed yet, complete the build-only setup first:
 
 ```powershell
