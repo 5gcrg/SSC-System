@@ -335,7 +335,7 @@ logs/
 - **XAMPP MySQL / MariaDB 15.1 Deployment:**
   - Start MySQL/MariaDB from the **XAMPP Control Panel** (or verify with `Test-NetConnection -ComputerName 127.0.0.1 -Port 3306`).
   - Ensure `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DATABASE` in `.env` match your XAMPP configuration.
-  - If Flyway migration fails on XAMPP due to dirty/failed schema records, reset the local database:
+  - **Disposable local databases only:** If Flyway migration fails on a throwaway XAMPP database, the following reset destroys all SSC data. Never run it against a production or shared database:
     ```powershell
     mysql -u root -e "DROP DATABASE IF EXISTS ssc_booking; CREATE DATABASE ssc_booking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
     ```
@@ -371,3 +371,29 @@ logs/
 | `9006` | MinIO S3 Storage |
 | `9007` | MinIO Admin Console |
 | `3306` | MySQL Database |
+
+---
+
+## Production-oriented Windows runner
+
+`scripts\production.ps1` is separate from the local `SETUP.ps1` and `start-all.ps1` workflow. It does not install packages, create database accounts, modify grants, or download binaries. It validates production-only settings, can build artifacts, and starts MinIO, the file server, API, and frontend in dependency order with health checks. MariaDB must already be running.
+
+1. Copy `scripts\production.env.example` to a file **outside this repository**, such as `C:\ProgramData\SSC-System\production.env`. Replace every placeholder and restrict the file to the deployment account. The backend and file server use their `prod` Spring profile; the runner forces secure cookies and disables development endpoints.
+2. Provide stable HTTPS hostnames for `FRONTEND_URL` and `MINIO_PUBLIC_URL`. Route the public MinIO hostname to the MinIO API over HTTPS. Do not expose the MinIO console. Use a named Cloudflare Tunnel or an HTTPS reverse proxy; the quick tunnel above is only for testing.
+3. Ensure `.tools\minio.exe` and the external `MINIO_DATA_DIR` directory are present. If moving existing data from `.tools\minio-data`, stop MinIO cleanly, copy the complete directory, and verify the copy before starting; do not point production at an empty directory by accident. If app and root MinIO credentials differ, provision the app user and its bucket permissions before starting.
+4. First, validate settings and database access without stopping the current app services. Then, with the four app services stopped, build and start:
+
+   ```powershell
+   $prodConfig = 'C:\ProgramData\SSC-System\production.env'
+   .\scripts\production.ps1 -Action Validate -ConfigPath $prodConfig
+   .\scripts\production.ps1 -Action Build -ConfigPath $prodConfig
+   .\scripts\production.ps1 -Action Check -ConfigPath $prodConfig
+   .\scripts\production.ps1 -Action Start -ConfigPath $prodConfig
+   .\scripts\production.ps1 -Action Status -ConfigPath $prodConfig
+   ```
+
+`Validate` checks settings and database authentication without changing the database. `Build` runs the Maven tests and creates a Next.js build tied to the supplied public configuration. `Check` verifies artifacts, external MinIO storage, and database authentication. `Start` refuses occupied ports or an outdated build, then waits for each service to become healthy. Logs go to `logs\production-*.log`.
+
+Back up MariaDB and MinIO before `Start` after a release: the backend's Flyway migrations may change the application schema during startup. Do not use the destructive database-reset instruction above for production data.
+
+This runner is suitable for a controlled deployment test, but **is not a Windows service manager**: it does not automatically restart services after a crash or reboot and intentionally has no force-stop command. Before unattended production use, run the processes under a service manager and test backup/restore for both MariaDB and MinIO.
